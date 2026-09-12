@@ -19,7 +19,8 @@ the generated view on the phone and mirror it to the detective's screen.
 The demo uses hardcoded scene steps triggered by a Next button. Each step adds
 or corrects an object at a predefined position. A looping animation controls scripted movement. A bottom timeline shows
 progress and events only; it has no scrubbing or seeking. Speech-driven placement is outside this
-initial scope.
+initial scope. Each step waits for Next while its animation loops. X2 is the
+only generation path; no alternative model or rendered-object fallback is planned.
 
 Keep the photographed surroundings and lighting unchanged. Added cars, people,
 animals and similar objects use distinct labelled 3D bounding volumes as generation guides.
@@ -48,7 +49,8 @@ flowchart TD
     B --> G[Detailed prompt builder]
     F --> H[Reactor X2 source video]
     G --> H
-    H --> I[Generated video on phone]
+    H --> M[View-specific loop cache and matching masks]
+    M --> I[Masked video over responsive photosphere]
     I --> J[Mirrored detective display]
     K[Backend session service] --> H
 ```
@@ -141,9 +143,12 @@ condition generation independently of the faint debug styling.
 
 The intended object occupies its authored volume. Generation should appear
 inside its projected bounds. Prompting is not a hard spatial constraint:
-proposed enforcement is to composite generated video over the original
+the agreed approach is to composite generated video over the original
 photosphere only within visible projected object masks, keeping original pixels
-elsewhere. Apply foreground occlusion to these masks too. Test edge quality,
+elsewhere. Allow a small configurable margin and softened edges around each
+projected box; apply foreground occlusion after expanding the mask. A larger
+margin may reveal altered background. Cropping cannot relocate an object that
+X2 generated outside its guide. Test edge quality,
 clipped objects and restricted shadows before accepting this technique.
 
 This requires matching returned frames to source camera and object state.
@@ -173,6 +178,44 @@ interaction. Next advances hardcoded scene steps; the playback clock drives
 movement and loops. Test generation across loop boundaries: identical source
 frames do not guarantee identical generated output.
 
+## View-specific generation cache
+
+Generate a complete animation cycle for a stable viewing direction, then cache
+and replay the same X2 video with its matching masks. Each story step waits for
+Next and loops its cached animation; the display-only timeline follows replay
+time. Cache replay prevents fresh generation drift on every cycle, but does not
+make the first and last frames seamless. Select and validate a suitable loop
+boundary, especially for standing people or other continuously visible objects.
+
+Key each cache entry by photosphere/calibration revision, scene step and
+correction revision, camera orientation and field of view, output dimensions,
+animation definition and generation settings. Store the generated clip, matching
+mask sequence or reproducible aligned mask state, and loop timing together.
+A correction invalidates affected scene entries. Keep cache size bounded on the
+phone; returning to an evicted direction may require fresh generation.
+
+Start with one stable direction; multiple direction entries can be added as the
+user explores. A cached clip is valid only for its matching view. Do not stretch
+or paste it onto another direction and assume perspective remains correct.
+
+When the phone moves outside a cached view, immediately rotate the original
+photosphere, hide unmatched generated layers and show a brief "Updating
+reconstruction" status. The user has explicitly accepted this interval. Once
+the direction settles, generate for that view; reveal the object layer when its
+video and masks align. Reuse a valid cached loop when the user returns to that
+view. Supersede obsolete view requests when the phone moves again, so late
+results never replace the current view. Changes in pitch and field of view
+matter as well as heading.
+
+Do not restart generation on every sensor sample. Determine the settling and
+view-match tolerances through testing. Keep debug bounds tied to the displayed
+state, and distinguish updating from cached replay. New directions and scene
+corrections still use X2; no generation fallback is authorised.
+
+Caching does not solve source/output timing alignment. Verify how a returned
+frame maps to source animation time before storing its masks. Holding a stable
+camera removes camera mismatch but not moving-object timing mismatch.
+
 ## Background source
 
 Use the user's own Google Pixel 7 photosphere directly, replacing Google Street
@@ -199,9 +242,10 @@ Compare the generated output with the source for position, scale, occlusion,
 background drift and orientation delay. Then correct an existing object's
 colour and facing direction while holding the camera fixed.
 
-Test looping, timeline progress and the debug toggle separately. If X2 fails placement requirements, evaluate
-more recognisable guide shapes or directly rendered objects before expanding
-the story. These are fallback proposals, not changes to the agreed box approach.
+Test looping, cache reuse, correction invalidation, direction changes, timeline
+progress and the debug toggle separately. Refine X2 guides, prompts and mask
+alignment if placement fails; report unresolved failures without switching to
+another model or directly rendered replacement objects.
 
 The van reveal also needs a geometry test: rotating a symmetric rectangular box
 180 degrees does not uncover a doorway. The scripted camera or object placement
@@ -224,7 +268,9 @@ The contributor notes below are preserved as reported evidence and proposals.
 Part A above reflects the latest user decisions: owned Pixel 7 photosphere,
 Mapbox-assisted alignment where feasible, display-only timeline without
 scrubbing, and subtle bounds controlled by a top-right debug toggle. Older
-scrubbing references below are superseded. Reported model tests and prompt
+scrubbing references below are superseded. The latest decision also supersedes
+all fallback recommendations below: X2 is the only generation path. Preserve
+those historical test results as evidence, not as implementation authorisation. Reported model tests and prompt
 limits below still need to inform implementation and validation.
 
 ---
