@@ -182,6 +182,7 @@ function PhotosphereExperienceContent() {
               </svg>
             </button>
             <p>Best experienced standing up with your phone upright.</p>
+            <a href="/measure" style={{ color: "inherit", fontSize: 14 }}>Measure street distances</a>
           </div>
         </section>
       ) : null}
