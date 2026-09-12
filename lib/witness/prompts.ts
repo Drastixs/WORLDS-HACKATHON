@@ -32,22 +32,22 @@ const VAN: Record<VanVariant, SceneObject> = {
     description: "a white panel van like the van in the reference image",
     placement: "at the kerb on the right, in front of the low building",
     orientation:
-      "The rear is nearest the camera and the front points directly away along the guide's long axis. " +
-      "The rear plane is perpendicular, at 90 degrees, to that axis",
+      "The front faces directly toward the camera along the guide's long axis. Align the grille and " +
+      "bumper with the nearest upright end plane, perpendicular at 90 degrees to the long axis",
     fit:
-      "Fit the van tightly to the complete grey guide: align its bumper, roof corners, side edges " +
-      "and tyre contact points with the corresponding guide boundary",
+      "Fit the van tightly to the complete grey guide: align the front bumper, grille, roof corners, " +
+      "side edges and tyre contact points with the corresponding guide boundary",
   },
   navy: {
     shape: "van-shaped",
     description: "a dark navy blue panel van shaped like the van in the reference image",
     placement: "at the kerb on the right, in front of the low building",
     orientation:
-      "The front faces directly toward the camera along the guide's long axis. Align the grille and " +
-      "bumper with the nearest upright end plane, perpendicular at 90 degrees to the long axis",
+      "The rear is nearest the camera and the front points directly away along the guide's long axis. " +
+      "The rear plane is perpendicular, at 90 degrees, to that axis",
     fit:
-      "Fit the van tightly to the complete grey guide: align the front bumper, grille, roof corners, " +
-      "side edges and tyre contact points with the corresponding guide boundary",
+      "Fit the van tightly to the complete grey guide: align its bumper, roof corners, side edges " +
+      "and tyre contact points with the corresponding guide boundary",
   },
 };
 
