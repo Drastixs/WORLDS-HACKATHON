@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:scene": "node --test lib/witness/scene.test.ts"
   },
   "dependencies": {
     "@photo-sphere-viewer/core": "5.15.1",

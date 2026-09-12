@@ -6,7 +6,9 @@ import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 
 import { WitnessControls } from "../components/witness/witness-controls";
 import { X2Overlay } from "../components/witness/x2-overlay";
 import { currentPose, type ViewPose } from "../lib/witness/geometry";
+import { STAGE_ONE_SCENE } from "../lib/witness/scene";
 import { WitnessX2Provider } from "../lib/witness/x2";
+import { SceneDebugOverlay } from "./scene-debug-overlay";
 
 const PANORAMA_URL = "/bastille-court-photosphere.jpg";
 
@@ -96,15 +98,20 @@ function PhotosphereExperienceContent() {
   const [entered, setEntered] = useState(false);
   const [status, setStatus] = useState<ExperienceStatus>("idle");
   const [hintVisible, setHintVisible] = useState(true);
+  const [debugVisible, setDebugVisible] = useState(false);
   const poseRef = useRef<ViewPose>({ yaw: 0, pitch: 0, zoom: 45 });
   const viewerRef = useRef<Viewer | null>(null);
 
   const handleReady = useCallback(() => setStatus("ready"), []);
-  const handleError = useCallback(() => setStatus("error"), []);
+  const handleError = useCallback(() => {
+    setDebugVisible(false);
+    setStatus("error");
+  }, []);
 
   const enterExperience = () => {
     setEntered(true);
     setStatus("loading");
+    setDebugVisible(false);
 
     if (document.documentElement.requestFullscreen) {
       void document.documentElement.requestFullscreen().catch(() => undefined);
@@ -113,6 +120,7 @@ function PhotosphereExperienceContent() {
 
   const tryAgain = () => {
     setStatus("loading");
+    setDebugVisible(false);
     setEntered(false);
     window.requestAnimationFrame(() => setEntered(true));
   };
@@ -125,6 +133,11 @@ function PhotosphereExperienceContent() {
         onReady={handleReady}
         poseRef={poseRef}
         viewerRef={viewerRef}
+      />
+      <SceneDebugOverlay
+        viewer={viewerRef.current}
+        object={STAGE_ONE_SCENE.objects[0]}
+        visible={status === "ready" && debugVisible}
       />
 
       {!entered ? (
@@ -165,7 +178,7 @@ function PhotosphereExperienceContent() {
       {entered && status === "ready" ? (
         <>
           <X2Overlay poseRef={poseRef} />
-          <WitnessControls viewerRef={viewerRef} />
+          <WitnessControls debug={debugVisible} onDebugChange={setDebugVisible} />
 
           <div className="place-label">
             <span className="location-dot" aria-hidden="true" />
