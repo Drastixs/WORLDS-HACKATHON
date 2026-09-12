@@ -88,3 +88,27 @@ npm run build
 The generator overwrites the three starter output files listed above. It uses the
 same geometry and SVG labels as the browser export, composited with the existing
 Sharp dependency. It does not send the photograph to an image generation service.
+
+The revised starter ground area includes both visible pavements and the distant
+road. Supplementary edge samples follow the curb through narrow parts of the
+image. Hollow teal markers retain coverage where the horizon or distance limit
+prevents measurement; their distance is null in `coverageMarkers` in the JSON.
+Applying a new ground polygon clears starter edge guides.
+
+## Distant labels, revision 3
+
+The starter maximum distance is now 100 m. Measurement rays can approach 0.25°
+below the horizon; calibration fitting still uses the original 2° cutoff.
+The far left road uses a **visually assumed** local horizon at export y=482,
+blended back to y=512 by y=550 within the saved distant-road polygon. This is a
+rough local ground approximation to handle the inconsistent horizon in this
+panorama; it is not a new map calibration, a measured slope, or verified depth.
+The assumed far horizon can be edited in the tool. Remove `distantRoad` from
+imported settings to disable the approximation. The fixed blend reference y=490
+is specific to this source image.
+
+These labels are rounded to whole metres and marked with `*`. The JSON stores
+`method: "local-horizon-estimate"` and `lowConfidence: true` for these estimates.
+All other estimates beyond 30 m are also marked low confidence. They must not be
+interpreted as satisfying the 1–2 m accuracy target. All starter markers now have
+an estimate; unavailable rays in user-edited configurations can still be hollow.
