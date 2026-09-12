@@ -7,28 +7,97 @@ import {
   type ProjectedGuide,
   type ViewPose,
 } from "./geometry";
+import {
+  createModelFrameSnapshot,
+  type GuidePrimitive,
+  type ModelFrameSnapshot,
+  type ProjectedFrameObject,
+} from "./model-frame";
+import { occlusionMasksForObject, projectOcclusionMask } from "./occlusion";
+import { projectSceneObject } from "./scene-projection";
+import type { SceneExport } from "./scene";
 
-// What X2 sees: a second, hidden Photo Sphere Viewer at a fixed 1472 × 832, set to the
-// phone's settled pose and zoom, with the grey van-shaped guide painted on — and nothing else
-// (no UI, no debug bounds). Fixed and landscape because the phone's view is portrait and X2
-// fixes its output shape from the first frames of a session. Using the same viewer library
-// as the phone keeps the two projections identical.
-
+// The hidden renderer is deliberately separate from the product UI. X2 receives only the
+// fixed landscape composite canvas, while the other two canvases make the exact clean input
+// and matching mask inspectable without connecting to Reactor.
 const FRAME_RATE = 24;
 const GUIDE_GREY = "rgb(128, 128, 128)";
-const WHEEL_GREY = "rgb(60, 60, 60)";
+
+export type ModelSceneFrame = Readonly<{
+  scene: SceneExport;
+  sceneRevision: string;
+  stepId: string;
+  animationTimeMs: number;
+}>;
+
+export type ModelFeedInspection = Readonly<{
+  background: HTMLCanvasElement;
+  composite: HTMLCanvasElement;
+  mask: HTMLCanvasElement;
+  frame: ModelFrameSnapshot | null;
+}>;
 
 export type ModelFeed = {
   track: MediaStreamTrack;
   setPose(pose: ViewPose): void;
   setMirrored(mirrored: boolean): void;
-  // The guide as last painted, in feed pixels.
+  setSceneFrame(frame: ModelSceneFrame): void;
   currentGuide(): ProjectedGuide | null;
+  currentMask(): HTMLCanvasElement;
+  inspection(): ModelFeedInspection;
   dispose(): void;
 };
 
+function canvas() {
+  const result = document.createElement("canvas");
+  result.width = MODEL_FEED_WIDTH;
+  result.height = MODEL_FEED_HEIGHT;
+  return result;
+}
+
+function tracePrimitive(context: CanvasRenderingContext2D, primitive: GuidePrimitive) {
+  context.beginPath();
+  if (primitive.shape === "ellipse") {
+    context.ellipse(
+      primitive.centre.x,
+      primitive.centre.y,
+      primitive.radiusX,
+      primitive.radiusY,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    return;
+  }
+  primitive.points.forEach((point, index) => {
+    if (index === 0) context.moveTo(point.x, point.y);
+    else context.lineTo(point.x, point.y);
+  });
+  context.closePath();
+}
+
+function fillPrimitives(context: CanvasRenderingContext2D, primitives: readonly GuidePrimitive[]) {
+  for (const primitive of primitives) {
+    tracePrimitive(context, primitive);
+    context.fill();
+  }
+}
+
+function erasePolygon(context: CanvasRenderingContext2D, points: readonly { x: number; y: number }[]) {
+  if (points.length < 3) return;
+  context.save();
+  context.globalCompositeOperation = "destination-out";
+  context.beginPath();
+  points.forEach((point, index) => {
+    if (index === 0) context.moveTo(point.x, point.y);
+    else context.lineTo(point.x, point.y);
+  });
+  context.closePath();
+  context.fill();
+  context.restore();
+}
+
 export async function createModelFeed(panoramaUrl: string, initialPose: ViewPose): Promise<ModelFeed> {
-  // A zero-size clipping wrapper, so the 1472-px viewer can never widen the phone's page.
   const wrapper = document.createElement("div");
   wrapper.setAttribute("aria-hidden", "true");
   Object.assign(wrapper.style, {
@@ -56,7 +125,6 @@ export async function createModelFeed(panoramaUrl: string, initialPose: ViewPose
     defaultYaw: initialPose.yaw,
     defaultPitch: initialPose.pitch,
     defaultZoomLvl: initialPose.zoom,
-    // Keep the last frame so it can be copied into the feed at any time.
     rendererParameters: { alpha: false, antialias: false, preserveDrawingBuffer: true },
   });
 
@@ -74,55 +142,131 @@ export async function createModelFeed(panoramaUrl: string, initialPose: ViewPose
   }
 
   const source = container.querySelector("canvas");
-  if (!source) throw new Error("The model feed viewer has no canvas.");
+  if (!source) {
+    viewer.destroy();
+    wrapper.remove();
+    throw new Error("The model feed viewer has no canvas.");
+  }
 
-  const feedCanvas = document.createElement("canvas");
-  feedCanvas.width = MODEL_FEED_WIDTH;
-  feedCanvas.height = MODEL_FEED_HEIGHT;
-  const context = feedCanvas.getContext("2d");
-  if (!context) throw new Error("Unable to create the model feed canvas.");
+  const background = canvas();
+  const composite = canvas();
+  const mask = canvas();
+  const objectGuide = canvas();
+  const objectMask = canvas();
+  const backgroundContext = background.getContext("2d");
+  const compositeContext = composite.getContext("2d");
+  const maskContext = mask.getContext("2d");
+  const objectGuideContext = objectGuide.getContext("2d");
+  const objectMaskContext = objectMask.getContext("2d");
+  if (!backgroundContext || !compositeContext || !maskContext || !objectGuideContext || !objectMaskContext) {
+    viewer.destroy();
+    wrapper.remove();
+    throw new Error("Unable to create the model feed canvases.");
+  }
 
+  let sceneFrame: ModelSceneFrame | null = null;
+  let frame: ModelFrameSnapshot | null = null;
+  let frameSequence = 0;
   let mirrored = false;
-  let guide: ProjectedGuide | null = null;
+  let legacyGuide: ProjectedGuide | null = null;
+  let poseDirty = false;
 
   const draw = () => {
-    context.drawImage(source, 0, 0, MODEL_FEED_WIDTH, MODEL_FEED_HEIGHT);
-    guide = projectGuide(viewer, VAN_GUIDE, { mirrored });
-    if (!guide) return;
-    context.fillStyle = GUIDE_GREY;
-    context.beginPath();
-    guide.outline.forEach((point, index) =>
-      index === 0 ? context.moveTo(point.x, point.y) : context.lineTo(point.x, point.y),
-    );
-    context.closePath();
-    context.fill();
-    context.fillStyle = WHEEL_GREY;
-    for (const wheel of guide.wheels) {
-      context.beginPath();
-      context.arc(wheel.x, wheel.y, wheel.r, 0, Math.PI * 2);
-      context.fill();
+    backgroundContext.drawImage(source, 0, 0, MODEL_FEED_WIDTH, MODEL_FEED_HEIGHT);
+    compositeContext.drawImage(background, 0, 0);
+    maskContext.clearRect(0, 0, MODEL_FEED_WIDTH, MODEL_FEED_HEIGHT);
+    legacyGuide = projectGuide(viewer, VAN_GUIDE, { mirrored });
+    if (!sceneFrame) return;
+
+    const projectedObjects: ProjectedFrameObject[] = [];
+    for (const object of sceneFrame.scene.objects) {
+      const projection = projectSceneObject(viewer, object);
+      if (!projection || projection.bounds.width <= 0 || projection.bounds.height <= 0) continue;
+      const occlusionPolygons = occlusionMasksForObject(sceneFrame.scene.occlusionMasks, object.id)
+        .map((occluder) => projectOcclusionMask(viewer, occluder)?.points)
+        .filter((points): points is { x: number; y: number }[] => Boolean(points));
+      projectedObjects.push({
+        id: object.id,
+        kind: object.kind,
+        bounds: projection.bounds,
+        facing: Math.sin(object.yawRad) < 0 ? "left" : "right",
+        occlusionPolygons,
+      });
+    }
+
+    frameSequence += 1;
+    frame = createModelFrameSnapshot({
+      frameId: `${sceneFrame.stepId}:${frameSequence}`,
+      sceneRevision: sceneFrame.sceneRevision,
+      calibrationRevision: sceneFrame.scene.panorama.calibration?.revision ?? "uncalibrated",
+      animationTimeMs: sceneFrame.animationTimeMs,
+      capturedAtMs: performance.now(),
+      pose: { ...viewer.getPosition(), zoom: viewer.getZoomLevel() },
+      verticalFovDeg: viewer.state.vFov,
+      widthPx: MODEL_FEED_WIDTH,
+      heightPx: MODEL_FEED_HEIGHT,
+      objects: projectedObjects,
+    });
+
+    for (const frameObject of frame.objects) {
+      objectGuideContext.clearRect(0, 0, MODEL_FEED_WIDTH, MODEL_FEED_HEIGHT);
+      objectMaskContext.clearRect(0, 0, MODEL_FEED_WIDTH, MODEL_FEED_HEIGHT);
+      objectGuideContext.fillStyle = GUIDE_GREY;
+      objectMaskContext.fillStyle = "white";
+      fillPrimitives(objectGuideContext, frameObject.guide);
+      fillPrimitives(objectMaskContext, frameObject.mask);
+
+      for (const polygon of frameObject.occlusionPolygons) {
+        erasePolygon(objectGuideContext, polygon);
+        erasePolygon(objectMaskContext, polygon);
+      }
+
+      compositeContext.drawImage(objectGuide, 0, 0);
+      maskContext.drawImage(objectMask, 0, 0);
     }
   };
 
   draw();
-  const track = feedCanvas.captureStream(FRAME_RATE).getVideoTracks()[0];
-  // Hold resolution and let the frame rate adapt instead.
+  const handleRender = () => {
+    poseDirty = false;
+    draw();
+  };
+  viewer.addEventListener(events.RenderEvent.type, handleRender);
+  const track = composite.captureStream(FRAME_RATE).getVideoTracks()[0];
   track.contentHint = "detail";
-  // The capturer only emits when the canvas repaints.
-  const timer = window.setInterval(draw, 1000 / FRAME_RATE);
+  const timer = window.setInterval(() => {
+    if (!poseDirty) draw();
+  }, 1000 / FRAME_RATE);
 
   return {
     track,
     setPose(pose) {
+      const current = viewer.getPosition();
+      const unchanged =
+        Math.abs(current.yaw - pose.yaw) < 1e-7 &&
+        Math.abs(current.pitch - pose.pitch) < 1e-7 &&
+        Math.abs(viewer.getZoomLevel() - pose.zoom) < 1e-7;
+      if (unchanged) {
+        poseDirty = false;
+        draw();
+        return;
+      }
+      poseDirty = true;
       viewer.rotate({ yaw: pose.yaw, pitch: pose.pitch });
       viewer.zoom(pose.zoom);
     },
     setMirrored(next) {
       mirrored = next;
     },
-    currentGuide: () => guide,
+    setSceneFrame(next) {
+      sceneFrame = next;
+    },
+    currentGuide: () => legacyGuide,
+    currentMask: () => mask,
+    inspection: () => ({ background, composite, mask, frame }),
     dispose() {
       window.clearInterval(timer);
+      viewer.removeEventListener(events.RenderEvent.type, handleRender);
       track.stop();
       viewer.destroy();
       wrapper.remove();

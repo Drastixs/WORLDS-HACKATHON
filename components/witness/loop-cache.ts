@@ -11,6 +11,7 @@ export type LoopCacheEntry = {
   key: string;
   blobUrl: string;
   guide: ProjectedGuide;
+  mask?: HTMLCanvasElement;
   pose: ViewPose;
   variant: VanVariant;
   sceneRevision: string;

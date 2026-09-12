@@ -34,6 +34,14 @@ no EXIF GPS coordinates. Mapbox alignment needs a supplied camera location.
   TypeScript, the production build, browser checks and supplied visual evidence
   pass. Calibration remains approximate (2.68 m fit RMS; 5.40 m cross-validation
   RMS), and model-facing mask reuse belongs to Stage 4.
+- **Stage 4 — implemented, awaiting Pixel 7 sign-off:** the fixed 1472 × 832
+  hidden feed now consumes the evaluated scene revision and loop time, renders
+  label-free vehicle/person/animal silhouettes, and produces synchronized clean
+  background, model-input and foreground-clipped object-mask canvases. Debug
+  exposes those three outputs and local frame metadata without changing the
+  captured feed. Eighteen focused scene/frame tests, TypeScript and browser
+  pixel inspection pass; the browser found zero changed pixels outside the
+  matching mask. Physical portrait-device inspection remains the stage gate.
 - **Stage 5 — complete (Zeus):** on the real photosphere, with the view on the van's kerb,
   X2 went live in ~11 s and one white panel van appeared inside its guide ~14 s after Start,
   composited over the untouched photo. The story's correction step turned it navy and facing

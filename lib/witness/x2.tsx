@@ -13,12 +13,11 @@ import {
 } from "react";
 import type { VanVariant, WitnessX2, WitnessX2Status } from "./contract";
 import type { ViewPose } from "./geometry";
-import { createModelFeed, type ModelFeed } from "./model-feed";
+import { createModelFeed, type ModelFeed, type ModelSceneFrame } from "./model-feed";
 import { vanPrompt } from "./prompts";
 
 const PANORAMA_URL = "/bastille-court-photosphere.jpg";
-// X2 follows the reference image over the prompt: with the white reference, a "navy" prompt
-// left the van white for 15 s on the real street. So each variant has its own reference.
+// X2 follows the reference image over the prompt, so each appearance uses a matching reference.
 const VAN_REFERENCE_URLS: Record<VanVariant, string> = {
   white: "/witness/van-reference.jpg",
   navy: "/witness/van-reference-navy.jpg",
@@ -64,6 +63,10 @@ function describeError(error: unknown) {
   return message;
 }
 
+function isFeedCancellation(error: unknown) {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
 const WitnessX2Context = createContext<WitnessX2 | null>(null);
 
 function WitnessX2Session({ children }: { children: ReactNode }) {
@@ -75,11 +78,18 @@ function WitnessX2Session({ children }: { children: ReactNode }) {
   const [settled, setSettled] = useState<{ pose: ViewPose | null; at: number }>({ pose: null, at: 0 });
 
   const feed = useRef<ModelFeed | null>(null);
+  const feedPromise = useRef<Promise<ModelFeed> | null>(null);
+  const feedEpoch = useRef(0);
+  const sessionEpoch = useRef(0);
+  const startTask = useRef<Promise<void> | null>(null);
+  const mountedRef = useRef(true);
+  const sceneFrameRef = useRef<ModelSceneFrame | null>(null);
+  const sceneRevisionRef = useRef<string | null>(null);
   const connectionStatus = useRef(x2.status);
   const variantRef = useRef<VanVariant>("white");
   const poseRef = useRef<ViewPose | null>(null);
   const statusRef = useRef<WitnessX2Status>("idle");
-  // Uploads belong to one session; cleared whenever a new one starts or it stops.
+  // Uploads belong to one session; cleared whenever a new one starts or stops.
   const references = useRef<Partial<Record<VanVariant, FileRef>>>({});
 
   useEffect(() => {
@@ -114,39 +124,108 @@ function WitnessX2Session({ children }: { children: ReactNode }) {
     [x2],
   );
 
-  const start = useCallback(async () => {
-    if (statusRef.current === "connecting" || statusRef.current === "generating") return;
+  const ensureFeed = useCallback(async () => {
+    if (feed.current) return feed.current;
+    if (feedPromise.current) return feedPromise.current;
+    const epoch = feedEpoch.current;
+    const pending = (async () => {
+      const created = await createModelFeed(PANORAMA_URL, poseRef.current ?? DEFAULT_POSE);
+      if (epoch !== feedEpoch.current) {
+        created.dispose();
+        throw new DOMException("Model feed creation was cancelled.", "AbortError");
+      }
+      feed.current = created;
+      if (sceneFrameRef.current) created.setSceneFrame(sceneFrameRef.current);
+      if (poseRef.current) created.setPose(poseRef.current);
+      created.setMirrored(variantRef.current === "navy");
+      return created;
+    })();
+    feedPromise.current = pending;
+    try {
+      return await pending;
+    } finally {
+      if (feedPromise.current === pending) feedPromise.current = null;
+    }
+  }, []);
+
+  const prepareFeed = useCallback(async () => {
+    try {
+      await ensureFeed();
+    } catch (caught) {
+      if (isFeedCancellation(caught)) {
+        if (mountedRef.current) update("idle");
+        return;
+      }
+      setError(describeError(caught));
+    }
+  }, [ensureFeed]);
+
+  const start = useCallback(() => {
+    if (statusRef.current === "connecting" || statusRef.current === "generating") return Promise.resolve();
+    const epoch = ++sessionEpoch.current;
+    const assertCurrent = () => {
+      if (epoch !== sessionEpoch.current || !mountedRef.current) {
+        throw new DOMException("Reconstruction start was cancelled.", "AbortError");
+      }
+    };
     setError(null);
     references.current = {};
     update("connecting");
-    try {
-      feed.current ??= await createModelFeed(PANORAMA_URL, poseRef.current ?? DEFAULT_POSE);
-      if (poseRef.current) feed.current.setPose(poseRef.current);
-      feed.current.setMirrored(variantRef.current === "navy");
+    const pending = (async () => {
+      try {
+        const currentFeed = await ensureFeed();
+        assertCurrent();
+        if (poseRef.current) currentFeed.setPose(poseRef.current);
+        currentFeed.setMirrored(variantRef.current === "navy");
 
-      if (connectionStatus.current === "disconnected") await x2.connect();
-      const deadline = performance.now() + READY_TIMEOUT_MS;
-      while (connectionStatus.current !== "ready") {
-        if (performance.now() > deadline) throw new Error("The X2 session did not become ready in time.");
-        await new Promise((resolve) => window.setTimeout(resolve, 150));
+        if (connectionStatus.current === "disconnected") {
+          await x2.connect();
+          assertCurrent();
+        }
+        const deadline = performance.now() + READY_TIMEOUT_MS;
+        while (connectionStatus.current !== "ready") {
+          assertCurrent();
+          if (performance.now() > deadline) throw new Error("The X2 session did not become ready in time.");
+          await new Promise((resolve) => window.setTimeout(resolve, 150));
+        }
+        assertCurrent();
+
+        await x2.publish("source", currentFeed.track);
+        assertCurrent();
+        const uploadedReference = await referenceFor(variantRef.current);
+        assertCurrent();
+        await x2.setReferenceImage({ reference_image: uploadedReference });
+        assertCurrent();
+        // Generation starts on its own once a prompt is set and source frames are arriving.
+        await x2.setPrompt({ prompt: vanPrompt(variantRef.current) });
+        assertCurrent();
+        setSettled((current) => ({ pose: current.pose ?? DEFAULT_POSE, at: performance.now() }));
+        update("generating");
+      } catch (caught) {
+        if (isFeedCancellation(caught) || epoch !== sessionEpoch.current || !mountedRef.current) return;
+        update("error");
+        setError(describeError(caught));
       }
-
-      await x2.publish("source", feed.current.track);
-      await x2.setReferenceImage({ reference_image: await referenceFor(variantRef.current) });
-      // Generation starts on its own once a prompt is set and source frames are arriving.
-      await x2.setPrompt({ prompt: vanPrompt(variantRef.current) });
-      setSettled((current) => ({ pose: current.pose ?? DEFAULT_POSE, at: performance.now() }));
-      update("generating");
-    } catch (caught) {
-      update("error");
-      setError(describeError(caught));
-    }
-  }, [referenceFor, update, x2]);
+    })();
+    startTask.current = pending;
+    void pending.finally(() => {
+      if (startTask.current === pending) startTask.current = null;
+    });
+    return pending;
+  }, [ensureFeed, referenceFor, update, x2]);
 
   const setPose = useCallback((pose: ViewPose) => {
     poseRef.current = pose;
     feed.current?.setPose(pose);
     setSettled({ pose, at: performance.now() });
+  }, []);
+
+  const setSceneFrame = useCallback((next: ModelSceneFrame) => {
+    const revisionChanged = sceneRevisionRef.current !== null && sceneRevisionRef.current !== next.sceneRevision;
+    sceneRevisionRef.current = next.sceneRevision;
+    sceneFrameRef.current = next;
+    feed.current?.setSceneFrame(next);
+    if (revisionChanged) setSettled((current) => ({ pose: current.pose, at: performance.now() }));
   }, []);
 
   const setVariant = useCallback(
@@ -171,6 +250,10 @@ function WitnessX2Session({ children }: { children: ReactNode }) {
   );
 
   const stop = useCallback(async () => {
+    sessionEpoch.current += 1;
+    feedEpoch.current += 1;
+    feedPromise.current = null;
+    await startTask.current?.catch(() => undefined);
     try {
       await x2.unpublish("source");
     } catch {
@@ -184,8 +267,17 @@ function WitnessX2Session({ children }: { children: ReactNode }) {
   }, [update, x2]);
 
   const feedGuide = useCallback(() => feed.current?.currentGuide() ?? null, []);
+  const feedMask = useCallback(() => feed.current?.currentMask() ?? null, []);
+  const inspectFeed = useCallback(() => feed.current?.inspection() ?? null, []);
 
-  useEffect(() => () => feed.current?.dispose(), []);
+  useEffect(() => () => {
+    mountedRef.current = false;
+    sessionEpoch.current += 1;
+    feedEpoch.current += 1;
+    feedPromise.current = null;
+    feed.current?.dispose();
+    feed.current = null;
+  }, []);
 
   const value = useMemo<WitnessX2>(
     () => ({
@@ -196,12 +288,16 @@ function WitnessX2Session({ children }: { children: ReactNode }) {
       settledPose: settled.pose,
       settledAt: settled.at,
       feedGuide,
+      feedMask,
+      prepareFeed,
+      setSceneFrame,
+      inspectFeed,
       start,
       setPose,
       setVariant,
       stop,
     }),
-    [error, feedGuide, outputTrack, setPose, setVariant, settled, start, status, stop, variant],
+    [error, feedGuide, feedMask, inspectFeed, outputTrack, prepareFeed, setPose, setSceneFrame, setVariant, settled, start, status, stop, variant],
   );
 
   return <WitnessX2Context.Provider value={value}>{children}</WitnessX2Context.Provider>;

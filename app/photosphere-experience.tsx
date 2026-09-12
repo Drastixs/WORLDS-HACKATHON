@@ -4,6 +4,7 @@ import { events, Viewer } from "@photo-sphere-viewer/core";
 import { GyroscopePlugin } from "@photo-sphere-viewer/gyroscope-plugin";
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from "react";
 import { ScenePlaybackControls } from "../components/witness/scene-playback-controls";
+import { ModelFeedInspector } from "../components/witness/model-feed-inspector";
 import { WitnessControls } from "../components/witness/witness-controls";
 import { X2Overlay } from "../components/witness/x2-overlay";
 import { witnessLoopCache } from "../components/witness/loop-cache";
@@ -108,6 +109,25 @@ function PhotosphereExperienceContent() {
   const syncedVariantRef = useRef<"white" | "navy" | null>(null);
   const playback = useScenePlayback(WITNESS_DEMO_SCRIPT);
   const x2 = useWitnessX2();
+  const sceneRevision = [
+    `schema-${playback.scene.schemaVersion}`,
+    playback.scene.panorama.calibration?.revision ?? "uncalibrated",
+    playback.step.id,
+    `revision-${playback.revision}`,
+  ].join(":");
+
+  useEffect(() => {
+    x2.setSceneFrame({
+      scene: playback.scene,
+      sceneRevision,
+      stepId: playback.step.id,
+      animationTimeMs: playback.loopTimeMs,
+    });
+  }, [playback.loopTimeMs, playback.scene, playback.step.id, sceneRevision, x2.setSceneFrame]);
+
+  useEffect(() => {
+    if (status === "ready") void x2.prepareFeed();
+  }, [status, x2.prepareFeed]);
 
   useEffect(() => {
     const variant = playback.corrected ? "navy" : "white";
@@ -199,12 +219,13 @@ function PhotosphereExperienceContent() {
 
       {entered && status === "ready" ? (
         <>
-          <X2Overlay poseRef={poseRef} />
+          <X2Overlay poseRef={poseRef} sceneRevision={sceneRevision} />
           <WitnessControls
             debug={debugVisible}
             corrected={playback.corrected}
             onDebugChange={setDebugVisible}
           />
+          <ModelFeedInspector visible={debugVisible} />
           <ScenePlaybackControls
             stepIndex={playback.stepIndex}
             totalSteps={playback.totalSteps}

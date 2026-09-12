@@ -40,6 +40,14 @@ function copyGuide(guide: ProjectedGuide): ProjectedGuide {
   };
 }
 
+function copyCanvas(source: HTMLCanvasElement) {
+  const copy = document.createElement("canvas");
+  copy.width = source.width;
+  copy.height = source.height;
+  copy.getContext("2d")?.drawImage(source, 0, 0);
+  return copy;
+}
+
 function recordingMimeType() {
   if (typeof MediaRecorder === "undefined") return undefined;
   return ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"].find((type) =>
@@ -161,7 +169,7 @@ export function X2Overlay({
       return entry;
     };
 
-    const startRecording = (now: number, guide: ProjectedGuide) => {
+    const startRecording = (now: number, guide: ProjectedGuide, visibleMask: HTMLCanvasElement) => {
       if (
         recording ||
         recordingUnsupportedRef.current ||
@@ -186,6 +194,7 @@ export function X2Overlay({
       const variant = x2.variant;
       const track = x2.outputTrack;
       const guideSnapshot = copyGuide(guide);
+      const maskSnapshot = copyCanvas(visibleMask);
       const chunks: Blob[] = [];
       let recorder: MediaRecorder;
       try {
@@ -237,6 +246,7 @@ export function X2Overlay({
           key: loopCacheKey(pose, variant, sceneRevision),
           blobUrl,
           guide: guideSnapshot,
+          mask: maskSnapshot,
           pose,
           variant,
           sceneRevision,
@@ -309,14 +319,17 @@ export function X2Overlay({
 
       let source: HTMLVideoElement;
       let guide: ProjectedGuide | null;
+      let visibleMask: HTMLCanvasElement | null;
       let fromCache = false;
       if (cachedReady) {
         source = replayVideo!;
         guide = cached!.guide;
+        visibleMask = cached!.mask ?? null;
         fromCache = true;
       } else if (liveReady) {
         source = liveVideo!;
         guide = x2.feedGuide();
+        visibleMask = x2.feedMask();
       } else {
         clear(canvas);
         showUpdating(x2.status === "connecting" || x2.status === "generating");
@@ -324,7 +337,7 @@ export function X2Overlay({
         return;
       }
 
-      if (!guide) {
+      if (!guide && !visibleMask) {
         clear(canvas);
         showUpdating(false);
         setReconstructionMode("live");
@@ -358,20 +371,24 @@ export function X2Overlay({
       compositeContext.lineJoin = "round";
       compositeContext.lineCap = "round";
       compositeContext.lineWidth = MASK_MARGIN_CSS_PX * dpr * 2;
-      compositeContext.beginPath();
-      guide.outline.forEach((point, index) => {
-        const x = mapX(point.x);
-        const y = mapY(point.y);
-        if (index === 0) compositeContext.moveTo(x, y);
-        else compositeContext.lineTo(x, y);
-      });
-      compositeContext.closePath();
-      for (const wheel of guide.wheels) {
-        compositeContext.moveTo(mapX(wheel.x) + wheel.r * scale, mapY(wheel.y));
-        compositeContext.arc(mapX(wheel.x), mapY(wheel.y), wheel.r * scale, 0, Math.PI * 2);
+      if (visibleMask) {
+        compositeContext.drawImage(visibleMask, dx, 0, frameWidth, height);
+      } else if (guide) {
+        compositeContext.beginPath();
+        guide.outline.forEach((point, index) => {
+          const x = mapX(point.x);
+          const y = mapY(point.y);
+          if (index === 0) compositeContext.moveTo(x, y);
+          else compositeContext.lineTo(x, y);
+        });
+        compositeContext.closePath();
+        for (const wheel of guide.wheels) {
+          compositeContext.moveTo(mapX(wheel.x) + wheel.r * scale, mapY(wheel.y));
+          compositeContext.arc(mapX(wheel.x), mapY(wheel.y), wheel.r * scale, 0, Math.PI * 2);
+        }
+        compositeContext.fill();
+        compositeContext.stroke();
       }
-      compositeContext.fill();
-      compositeContext.stroke();
       compositeContext.restore();
 
       compositeContext.save();
@@ -383,7 +400,7 @@ export function X2Overlay({
       overlayContext.drawImage(composite, 0, 0);
       showUpdating(false);
       setReconstructionMode(fromCache ? "cached" : "live");
-      if (!fromCache) startRecording(now, guide);
+      if (!fromCache && guide && visibleMask) startRecording(now, guide, visibleMask);
     };
 
     animationFrame = window.requestAnimationFrame(render);

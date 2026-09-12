@@ -2,6 +2,7 @@
 // compositor (Prometheus-w: components/witness/*). Change it only by agreement.
 
 import type { ProjectedGuide, ViewPose } from "./geometry";
+import type { ModelFeedInspection, ModelSceneFrame } from "./model-feed";
 
 // The story's one correction: the van was not white, it was dark and faced the other way.
 export type VanVariant = "white" | "navy";
@@ -24,6 +25,13 @@ export interface WitnessX2 {
   // projected by the feed's own viewer: the compositing mask. Null until the feed is ready
   // or when the van is off-screen. Cheap; call it every frame.
   feedGuide(): ProjectedGuide | null;
+  // Exact multi-object, motion-aware and foreground-clipped mask for the current model frame.
+  feedMask(): HTMLCanvasElement | null;
+  // Prepare the local renderer without connecting to Reactor, so Stage 4 inputs can be
+  // inspected and tested independently of model capacity.
+  prepareFeed(): Promise<void>;
+  setSceneFrame(frame: ModelSceneFrame): void;
+  inspectFeed(): ModelFeedInspection | null;
   // Connect, publish the model feed, set the van reference image and the prompt.
   start(): Promise<void>;
   // Call once the phone's view has settled (use currentPose(viewer) from geometry.ts).
