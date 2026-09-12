@@ -1,1 +1,2 @@
 van-reference.jpg: cropped side panel of "Ford Transit (2019) Rutesheimer Autoschau 2026 IMG 6783.jpg", Wikimedia Commons, CC BY-SA 4.0. Number plate cropped out.
+van-reference-navy.jpg: the same crop with the white bodywork recoloured dark navy (a derivative, CC BY-SA 4.0). X2 follows the reference image over the prompt, so the correction swaps to this image.

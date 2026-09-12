@@ -1,6 +1,6 @@
 "use client";
 
-import { X2Provider, useX2, useX2Message, useX2Track } from "@reactor-models/x2";
+import { X2Provider, useX2, useX2Message, useX2Track, type FileRef } from "@reactor-models/x2";
 import {
   createContext,
   useCallback,
@@ -17,7 +17,12 @@ import { createModelFeed, type ModelFeed } from "./model-feed";
 import { vanPrompt } from "./prompts";
 
 const PANORAMA_URL = "/bastille-court-photosphere.jpg";
-const VAN_REFERENCE_URL = "/witness/van-reference.jpg";
+// X2 follows the reference image over the prompt: with the white reference, a "navy" prompt
+// left the van white for 15 s on the real street. So each variant has its own reference.
+const VAN_REFERENCE_URLS: Record<VanVariant, string> = {
+  white: "/witness/van-reference.jpg",
+  navy: "/witness/van-reference-navy.jpg",
+};
 // Until the phone reports a settled pose: straight ahead at the phone viewer's zoom.
 const DEFAULT_POSE: ViewPose = { yaw: 0, pitch: 0, zoom: 45 };
 const READY_TIMEOUT_MS = 120_000;
@@ -74,6 +79,8 @@ function WitnessX2Session({ children }: { children: ReactNode }) {
   const variantRef = useRef<VanVariant>("white");
   const poseRef = useRef<ViewPose | null>(null);
   const statusRef = useRef<WitnessX2Status>("idle");
+  // Uploads belong to one session; cleared whenever a new one starts or it stops.
+  const references = useRef<Partial<Record<VanVariant, FileRef>>>({});
 
   useEffect(() => {
     connectionStatus.current = x2.status;
@@ -95,9 +102,22 @@ function WitnessX2Session({ children }: { children: ReactNode }) {
     setStatus(next);
   }, []);
 
+  const referenceFor = useCallback(
+    async (next: VanVariant) => {
+      const uploaded = references.current[next];
+      if (uploaded) return uploaded;
+      const image = await (await fetch(VAN_REFERENCE_URLS[next])).blob();
+      const fileRef = await x2.uploadFile(image);
+      references.current[next] = fileRef;
+      return fileRef;
+    },
+    [x2],
+  );
+
   const start = useCallback(async () => {
     if (statusRef.current === "connecting" || statusRef.current === "generating") return;
     setError(null);
+    references.current = {};
     update("connecting");
     try {
       feed.current ??= await createModelFeed(PANORAMA_URL, poseRef.current ?? DEFAULT_POSE);
@@ -112,8 +132,7 @@ function WitnessX2Session({ children }: { children: ReactNode }) {
       }
 
       await x2.publish("source", feed.current.track);
-      const reference = await (await fetch(VAN_REFERENCE_URL)).blob();
-      await x2.setReferenceImage({ reference_image: await x2.uploadFile(reference) });
+      await x2.setReferenceImage({ reference_image: await referenceFor(variantRef.current) });
       // Generation starts on its own once a prompt is set and source frames are arriving.
       await x2.setPrompt({ prompt: vanPrompt(variantRef.current) });
       setSettled((current) => ({ pose: current.pose ?? DEFAULT_POSE, at: performance.now() }));
@@ -122,7 +141,7 @@ function WitnessX2Session({ children }: { children: ReactNode }) {
       update("error");
       setError(describeError(caught));
     }
-  }, [update, x2]);
+  }, [referenceFor, update, x2]);
 
   const setPose = useCallback((pose: ViewPose) => {
     poseRef.current = pose;
@@ -140,13 +159,15 @@ function WitnessX2Session({ children }: { children: ReactNode }) {
       setSettled((current) => ({ pose: current.pose, at: performance.now() }));
       if (statusRef.current !== "generating") return;
       try {
+        // Prompt first, so the restart that a reference swap triggers already carries it.
         await x2.setPrompt({ prompt: vanPrompt(next) });
+        await x2.setReferenceImage({ reference_image: await referenceFor(next) });
       } catch (caught) {
         update("error");
         setError(describeError(caught));
       }
     },
-    [update, x2],
+    [referenceFor, update, x2],
   );
 
   const stop = useCallback(async () => {
@@ -158,6 +179,7 @@ function WitnessX2Session({ children }: { children: ReactNode }) {
     await x2.disconnect().catch(() => undefined);
     feed.current?.dispose();
     feed.current = null;
+    references.current = {};
     update("idle");
   }, [update, x2]);
 

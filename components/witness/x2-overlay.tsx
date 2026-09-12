@@ -22,6 +22,9 @@ export const VIEW_TOLERANCE = (3 * Math.PI) / 180;
 export const REVEAL_DELAY_MS = 2_500;
 export const RECORD_WARMUP_MS = 500;
 export const LOOP_MS = 4_000;
+// X2 keeps showing the old appearance for a while after a correction; recording before it has
+// changed would cache the old van under the new variant and replay it indefinitely.
+export const APPEARANCE_SETTLE_MS = 6_000;
 export const MASK_MARGIN_CSS_PX = 14;
 export const MASK_BLUR_CSS_PX = 6;
 
@@ -75,9 +78,17 @@ export function X2Overlay({
   const replayEntryRef = useRef<LoopCacheEntry | null>(null);
   const recordingUnsupportedRef = useRef(false);
   const recordRetryAtRef = useRef(0);
+  const variantChangedAtRef = useRef(0);
+  const lastVariantRef = useRef(x2.variant);
   const [replayEntry, setReplayEntry] = useState<LoopCacheEntry | null>(null);
   const [updating, setUpdating] = useState(false);
   const updatingRef = useRef(false);
+
+  useEffect(() => {
+    if (lastVariantRef.current === x2.variant) return;
+    lastVariantRef.current = x2.variant;
+    variantChangedAtRef.current = performance.now();
+  }, [x2.variant]);
 
   useEffect(() => {
     const video = liveVideoRef.current;
@@ -156,6 +167,7 @@ export function X2Overlay({
         recordingUnsupportedRef.current ||
         now < recordRetryAtRef.current ||
         now < x2.settledAt + REVEAL_DELAY_MS + RECORD_WARMUP_MS ||
+        now < variantChangedAtRef.current + APPEARANCE_SETTLE_MS ||
         !x2.outputTrack ||
         !x2.settledPose
       ) {

@@ -34,6 +34,15 @@ no EXIF GPS coordinates. Mapbox alignment needs a supplied camera location.
   TypeScript, the production build, browser checks and supplied visual evidence
   pass. Calibration remains approximate (2.68 m fit RMS; 5.40 m cross-validation
   RMS), and model-facing mask reuse belongs to Stage 4.
+- **Stage 5 — complete (Zeus):** on the real photosphere, with the view on the van's kerb,
+  X2 went live in ~11 s and one white panel van appeared inside its guide ~14 s after Start,
+  composited over the untouched photo. The story's correction step turned it navy and facing
+  the other way in place within 9 s, and the loop cache then replayed the navy van. The white
+  reference image had held the van white for 15 s against a navy prompt, so the correction now
+  also swaps to a navy reference. Checked in headless Chrome at 1440×900
+  (`scripts/witness/stage5-live-test.ps1`, evidence `docs/evidence/stage5-*`); not yet on a
+  physical Pixel 7. On a desktop with no motion sensor the gyroscope plugin ignores programmatic
+  rotation, so the test stops it first; worth checking that desktop dragging still turns the view.
 
 ## Ownership
 
