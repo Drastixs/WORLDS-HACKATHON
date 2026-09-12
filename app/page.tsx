@@ -1,5 +1,5 @@
-import { StreetViewExperience } from "./street-view-experience";
+import { PhotosphereExperience } from "./photosphere-experience";
 
 export default function Home() {
-  return <StreetViewExperience />;
+  return <PhotosphereExperience />;
 }

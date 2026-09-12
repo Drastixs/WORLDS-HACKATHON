@@ -1,30 +1,24 @@
 # WORLD
 
-A one-phone Next.js demo that opens Google Street View outside Bastille Court,
-1–2 Paris Garden, London. On supported mobile devices, turning the phone changes
-the point of view. Touch dragging remains available as a fallback.
+A one-phone Next.js demo that opens an owned Pixel 7 photosphere captured outside
+Bastille Court, 1–2 Paris Garden, London. On supported mobile devices, turning the
+phone changes the point of view. Touch dragging remains available as a fallback.
 
-## Set up Google Maps
+## Run locally
 
-1. Create a browser API key in Google Cloud.
-2. Enable **Maps JavaScript API** and billing for the project.
-3. Restrict the key to your deployed HTTPS domain and to Maps JavaScript API.
-4. Copy `.env.example` to `.env.local` and add the key.
-
-```sh
-cp .env.example .env.local
+```shell
 npm install
 npm run dev
 ```
 
 Open the site on the Pixel 7 in Chrome and tap **Look around**. Motion sensors
 require a secure context, so use an HTTPS deployment for the phone demo. The
-Street View motion-tracking control appears only when the browser reports sensor
-support.
+photosphere is bundled with the app and does not require an imagery API or network
+request after the site has loaded.
 
 ## Checks
 
-```sh
+```shell
 npm run typecheck
 npm run build
 ```

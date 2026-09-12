@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Paris Garden | Look Around",
-  description: "A motion-controlled Street View experience at Bastille Court.",
+  description: "A motion-controlled photosphere experience at Bastille Court.",
 };
 
 export const viewport: Viewport = {

@@ -23,14 +23,14 @@ Immediate, immersive, grounded.
 ## Anti-references
 
 Avoid science-fiction AR styling, map-dashboard clutter, onboarding tours, and
-controls that compete with the Street View imagery.
+controls that compete with the photosphere.
 
 ## Design Principles
 
 - Put the place first and keep interface chrome secondary.
 - Make the primary gesture obvious before the panorama opens.
 - Design for one-handed use on a Pixel 7 in variable ambient light.
-- Fail clearly when an API key, panorama, or network connection is unavailable.
+- Fail clearly when the panorama or WebGL is unavailable.
 
 ## Accessibility & Inclusion
 
