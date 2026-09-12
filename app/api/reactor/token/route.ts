@@ -1,5 +1,5 @@
-// X2 is the primary path and LingBot World 2 the fallback, so one token covers both.
-const MODELS = ["xmax/x2", "lingbot-world-2"];
+// X2 is the only generation path (architecture.md), so tokens are scoped to it alone.
+const MODELS = ["xmax/x2"];
 
 // Exchanges the server-side API key for a short-lived, session-scoped token so the key
 // never reaches the browser. The client caches the token in memory for its lifetime:
