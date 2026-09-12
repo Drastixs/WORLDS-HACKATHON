@@ -18,20 +18,36 @@ export function assertSafeForReactor(prompt: string) {
 // One object in the scene, as the prompt describes it (architecture.md, Part A: each guide shape
 // and spatial location mapped to its description, scale, facing and appearance). The model-facing
 // frame carries no text labels, so objects are named by their guide's shape and place.
-type SceneObject = { shape: string; description: string; placement: string; facing: string };
+type SceneObject = {
+  shape: string;
+  description: string;
+  placement: string;
+  orientation: string;
+  fit: string;
+};
 
 const VAN: Record<VanVariant, SceneObject> = {
   white: {
     shape: "van-shaped",
     description: "a white panel van like the van in the reference image",
     placement: "at the kerb on the right, in front of the low building",
-    facing: "side-on to the camera",
+    orientation:
+      "The rear is nearest the camera and the front points directly away along the guide's long axis. " +
+      "The rear plane is perpendicular, at 90 degrees, to that axis",
+    fit:
+      "Fit the van tightly to the complete grey guide: align its bumper, roof corners, side edges " +
+      "and tyre contact points with the corresponding guide boundary",
   },
   navy: {
     shape: "van-shaped",
     description: "a dark navy blue panel van shaped like the van in the reference image",
     placement: "at the kerb on the right, in front of the low building",
-    facing: "side-on to the camera and facing the other way",
+    orientation:
+      "The front faces directly toward the camera along the guide's long axis. Align the grille and " +
+      "bumper with the nearest upright end plane, perpendicular at 90 degrees to the long axis",
+    fit:
+      "Fit the van tightly to the complete grey guide: align the front bumper, grille, roof corners, " +
+      "side edges and tyre contact points with the corresponding guide boundary",
   },
 };
 
@@ -41,13 +57,13 @@ function buildPrompt(objects: SceneObject[]) {
   const replacements = objects.map(
     (object) =>
       `Replace the grey ${object.shape} guide ${object.placement} with ${object.description}, ` +
-      `filling the guide exactly at the same size and position, ${object.facing}.`,
+      `at exactly the same size and position. ${object.orientation}. ${object.fit}. ` +
+      "Keep every generated vehicle pixel inside the guide; do not extend beyond any edge or corner.",
   );
   return assertSafeForReactor(
     [
       ...replacements,
-      "Keep the photographed street exactly as it is: the pub, the black fence, the buildings, " +
-        "the trees, the road markings, the sunlight, the shadows and the camera perspective.",
+      "Keep the photographed pub, fence, buildings, trees, road, light, shadows and camera perspective unchanged.",
       "Each object follows its guide's motion and stays hidden wherever something covers its " +
         "guide. A parked vehicle stays parked and still.",
       "Remove every grey guide shape completely.",
