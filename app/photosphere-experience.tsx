@@ -2,7 +2,11 @@
 
 import { events, Viewer } from "@photo-sphere-viewer/core";
 import { GyroscopePlugin } from "@photo-sphere-viewer/gyroscope-plugin";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type MutableRefObject } from "react";
+import { WitnessControls } from "../components/witness/witness-controls";
+import { X2Overlay } from "../components/witness/x2-overlay";
+import { currentPose, type ViewPose } from "../lib/witness/geometry";
+import { WitnessX2Provider } from "../lib/witness/x2";
 
 const PANORAMA_URL = "/bastille-court-photosphere.jpg";
 
@@ -12,10 +16,14 @@ function PanoramaViewer({
   active,
   onError,
   onReady,
+  poseRef,
+  viewerRef,
 }: {
   active: boolean;
   onError: () => void;
   onReady: () => void;
+  poseRef?: MutableRefObject<ViewPose>;
+  viewerRef?: MutableRefObject<Viewer | null>;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -48,23 +56,32 @@ function PanoramaViewer({
         ],
       ],
     });
+    if (viewerRef) viewerRef.current = viewer;
 
     const handleReady = () => {
+      if (poseRef) poseRef.current = currentPose(viewer);
       onReady();
       const gyroscope = viewer.getPlugin<GyroscopePlugin>(GyroscopePlugin);
       void gyroscope.start("fast").catch(() => undefined);
     };
     const handleError = () => onError();
+    const handleRender = () => {
+      if (!poseRef) return;
+      poseRef.current = currentPose(viewer);
+    };
 
     viewer.addEventListener(events.ReadyEvent.type, handleReady, { once: true });
     viewer.addEventListener(events.PanoramaErrorEvent.type, handleError);
+    viewer.addEventListener(events.RenderEvent.type, handleRender);
 
     return () => {
       viewer.removeEventListener(events.ReadyEvent.type, handleReady);
       viewer.removeEventListener(events.PanoramaErrorEvent.type, handleError);
+      viewer.removeEventListener(events.RenderEvent.type, handleRender);
+      if (viewerRef) viewerRef.current = null;
       viewer.destroy();
     };
-  }, [active, onError, onReady]);
+  }, [active, onError, onReady, poseRef, viewerRef]);
 
   return (
     <div
@@ -75,10 +92,12 @@ function PanoramaViewer({
   );
 }
 
-export function PhotosphereExperience() {
+function PhotosphereExperienceContent() {
   const [entered, setEntered] = useState(false);
   const [status, setStatus] = useState<ExperienceStatus>("idle");
   const [hintVisible, setHintVisible] = useState(true);
+  const poseRef = useRef<ViewPose>({ yaw: 0, pitch: 0, zoom: 45 });
+  const viewerRef = useRef<Viewer | null>(null);
 
   const handleReady = useCallback(() => setStatus("ready"), []);
   const handleError = useCallback(() => setStatus("error"), []);
@@ -100,7 +119,13 @@ export function PhotosphereExperience() {
 
   return (
     <main className={entered ? "experience experience--entered" : "experience"}>
-      <PanoramaViewer active={entered} onError={handleError} onReady={handleReady} />
+      <PanoramaViewer
+        active={entered}
+        onError={handleError}
+        onReady={handleReady}
+        poseRef={poseRef}
+        viewerRef={viewerRef}
+      />
 
       {!entered ? (
         <section className="welcome" aria-labelledby="welcome-title">
@@ -139,6 +164,9 @@ export function PhotosphereExperience() {
 
       {entered && status === "ready" ? (
         <>
+          <X2Overlay poseRef={poseRef} />
+          <WitnessControls viewerRef={viewerRef} />
+
           <div className="place-label">
             <span className="location-dot" aria-hidden="true" />
             <span>
@@ -172,5 +200,13 @@ export function PhotosphereExperience() {
         </section>
       ) : null}
     </main>
+  );
+}
+
+export function PhotosphereExperience() {
+  return (
+    <WitnessX2Provider>
+      <PhotosphereExperienceContent />
+    </WitnessX2Provider>
   );
 }
