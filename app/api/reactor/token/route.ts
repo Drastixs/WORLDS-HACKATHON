@@ -1,8 +1,10 @@
-const MODEL = "lingbot-world-2";
+// X2 is the primary path and LingBot World 2 the fallback, so one token covers both.
+const MODELS = ["xmax/x2", "lingbot-world-2"];
 
 // Exchanges the server-side API key for a short-lived, session-scoped token so the key
-// never reaches the browser.
-export async function POST() {
+// never reaches the browser. The client caches the token in memory for its lifetime:
+// a session can only be operated by the token that created it.
+export async function GET() {
   const apiKey = process.env.REACTOR_API_KEY;
   if (!apiKey) {
     return Response.json({ error: "REACTOR_API_KEY is not set." }, { status: 500 });
@@ -16,7 +18,7 @@ export async function POST() {
       authorization_details: [
         {
           type: "session",
-          resources: { models: { match: [MODEL] } },
+          resources: { models: { match: MODELS } },
           constraints: { max_sessions: 20, max_session_duration_seconds: 1800 },
         },
       ],
@@ -27,13 +29,10 @@ export async function POST() {
   if (!response.ok) {
     return Response.json(
       { error: `Reactor token request failed (${response.status}).` },
-      { status: 502 },
+      { status: 502, headers: { "Cache-Control": "no-store" } },
     );
   }
 
-  const { jwt, expires_at: expiresAt } = (await response.json()) as {
-    jwt: string;
-    expires_at: number;
-  };
-  return Response.json({ jwt, expiresAt });
+  const { jwt, expires_at } = (await response.json()) as { jwt: string; expires_at: number };
+  return Response.json({ jwt, expires_at }, { headers: { "Cache-Control": "no-store" } });
 }
