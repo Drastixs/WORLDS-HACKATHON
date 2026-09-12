@@ -66,12 +66,12 @@ no EXIF GPS coordinates. Mapbox alignment needs a supplied camera location.
 
 1. **Start facing the scene.** The van is at yaw ≈ 2.01 rad (115°) from the viewer's start;
    the figure and car are nearby. Opening with `defaultYaw` ≈ 2.0 saves the judge a large turn.
-2. **One van placement.** The Debug volume and `VAN_GUIDE` in `lib/witness/geometry.ts`
-   (photosphere pixels) currently disagree slightly. Stage 4 should drive the model-facing guide
-   from scene data and retire `VAN_GUIDE`.
-3. **Stage 4 plugs into the existing feed.** `lib/witness/model-feed.ts` renders the model-facing
-   frame (hidden 1472×832 Photo Sphere Viewer) and `feedGuide()` is the compositing mask; replace
-   the grey silhouette with renderer guides and masks behind the same contract.
+2. **One van placement.** Since `57a355e` the overlay composites through the scene-based
+   `feedMask()`, so the van now sits where the scene puts it. `VAN_GUIDE` in
+   `lib/witness/geometry.ts` survives only behind `feedGuide()`; retire it once nothing reads it.
+3. **Stage 4 — done in `57a355e`.** The hidden 1472×832 feed now renders scene-driven,
+   occlusion-clipped guides and `feedMask()`; Agent 2 verified the Stage 5 correction fix
+   (`1a80f67`) survived it.
 4. **X2 returns no frame tags** (294 tagged frames in, 0 out), so there is no per-frame
    correspondence from the model. Moving-object masks need measured latency or held state.
 5. **Reference images beat prompts.** Appearance changes need their own reference image; the
