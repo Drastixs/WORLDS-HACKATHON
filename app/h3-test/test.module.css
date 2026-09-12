@@ -1,0 +1,14 @@
+.page { height: 100dvh; overflow: auto; padding: 24px; max-width: 1600px; margin: auto; }
+.page h1 { margin-bottom: 8px; max-width: none; font-size: clamp(28px, 4vw, 48px); }
+.page p { color: #c6c7bb; line-height: 1.5; }
+.page a { color: #f4dc48; }
+.actions { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; margin: 20px 0; }
+.actions button { background: #f4dc48; color: #191b14; padding: 12px 18px; border: 0; border-radius: 12px; cursor: pointer; font-weight: 600; }
+.actions button:disabled { opacity: .45; cursor: default; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 20px; }
+@media (min-width: 900px) { .grid { grid-template-columns: 1fr 1fr; } }
+.grid h2 { font-size: 16px; }
+.grid img, .grid video { width: 100%; aspect-ratio: 16 / 9; object-fit: contain; background: #090b08; border-radius: 10px; }
+.page details { margin-top: 24px; }
+.page summary { cursor: pointer; }
+.page textarea { width: 100%; min-height: 250px; padding: 16px; margin-top: 12px; font: inherit; line-height: 1.5; }

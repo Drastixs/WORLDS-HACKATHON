@@ -7,6 +7,35 @@ to the next stage. This is a plan, not a claim that these features exist.
 The architecture and team interfaces are defined in
 [architecture.md](architecture.md#part-c--agreed-integration-plan).
 
+## H3 capability test — isolated experiment
+
+The current user-authorized experiment is at `/h3-test`. The main scene still uses
+X2. This exception to the original X2-only plan tests H3 before any pipeline migration.
+
+- Render one perspective of the owned photosphere at the authored van position.
+  Replace the side-profile guide with a front-facing grey rectangle for this test.
+- Upload exactly one 1344 × 768 PNG through the existing Reactor SDK to
+  `reactor/h3-reference-to-video-turbo-realtime`; request five seconds with seed 42.
+- Use an H3-only server-minted token, retained for the entire session. The API key
+  remains server-side. A three-minute client timeout and four-minute session limit
+  bound the experiment; cancel, completion and unmount close the connection.
+- Record the video output in browser memory for local replay and downloads. Capture
+  a selected frame and compare the full result with a rectangular mask plus 5 pixels
+  over the original street. This mask bounds displayed pixels, not model accuracy.
+- The exact prompt is editable and visible on the page. Its default asks for a
+  stationary white van facing the camera and preservation of the photographed scene.
+
+**Observed:** a real Chromium session uploaded the reference, generated a front-facing
+white van, completed playback, disconnected, and replayed the recorded output. Frame
+selection works. H3 alters details in the raw street output; inspect the raw frame as
+well as the crop before approving placement quality. TypeScript and 20 scene tests pass.
+
+**Test gate:** open `/h3-test` in Chromium, press **Generate one clip**, wait for
+**Complete**, then play/pause the local recording and press **Capture replay frame**.
+Compare the van's front, roof, wheels and edges against the grey reference and masked
+result. Download the clip/frame if useful. Refresh clears the recording. Server cache,
+moving objects and integration into the main photosphere are deliberately later stages.
+
 ## Existing foundation
 
 The Next.js application already displays the owned photosphere using Photo
