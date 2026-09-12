@@ -17,12 +17,12 @@ direction outside Bastille Court. Touch dragging remains the fallback. Display
 the generated view on the phone and mirror it to the detective's screen.
 
 The demo uses hardcoded scene steps triggered by a Next button. Each step adds
-or corrects an object at a predefined position. A looping timeline and bottom
-scrubber control scripted movement. Speech-driven placement is outside this
+or corrects an object at a predefined position. A looping animation controls scripted movement. A bottom timeline shows
+progress and events only; it has no scrubbing or seeking. Speech-driven placement is outside this
 initial scope.
 
 Keep the photographed surroundings and lighting unchanged. Added cars, people,
-animals and similar objects use labelled black 3D boxes as generation guides.
+animals and similar objects use distinct labelled 3D bounding volumes as generation guides.
 Accurate object placement is the primary success criterion.
 
 ## Core approach
@@ -39,10 +39,11 @@ physical walking through it.
 
 ```mermaid
 flowchart TD
-    A[Next button and timeline scrubber] --> B[Deterministic scene state]
+    A[Next button and playback clock] --> B[Deterministic scene state]
     C[Phone orientation or touch drag] --> D[Fixed-position virtual camera]
     E[Panorama and aligned occlusion geometry] --> F[Source renderer]
     B --> F
+    B --> L[Display-only timeline]
     D --> F
     B --> G[Detailed prompt builder]
     F --> H[Reactor X2 source video]
@@ -64,10 +65,10 @@ Use one shared scene definition for rendering, prompts and playback. It contains
 - Static geometry and masks used to hide objects behind photographed features.
 
 Keep the current story step, playback time and camera orientation separate.
-Evaluate object transforms directly from the selected time so seeking backwards
-and looping produce the same source scene. A correction updates the same object
-ID; it does not rebuild the street. Define explicitly which corrections persist
-when the animation loops.
+Evaluate transforms directly from playback time so looping produces the same
+source scene. The timeline is an indicator, not an input. A correction updates the same object
+ID; it does not rebuild the street. Preserve corrections across animation loops; restarting the full demo restores
+the initial revision.
 
 Positions and paths come from the authored scene, not from instructions asking
 X2 to invent movement. For example, the car's box follows a predefined trajectory
@@ -89,10 +90,15 @@ Calibrate the panorama heading, camera height, ground plane and object scale
 using visible landmarks. From a single photograph these measurements are
 estimates; visual alignment is not a surveyed reconstruction.
 
-Mapbox building extrusions may help establish rough building volumes, but do
-not supply the detailed bicycle, fence and tree geometry needed here. Adding
-Mapbox is optional and does not remove the alignment work. See the official
-[3D buildings example](https://docs.mapbox.com/mapbox-gl-js/example/3d-buildings/).
+Use Mapbox where available to establish rough building volumes near the
+photosphere GPS coordinates. Read latitude and longitude from the original
+image metadata, validate them, and convert nearby geometry into a local frame
+centred on the camera. GPS gives approximate location, not panorama heading,
+camera height or precise image alignment. Inspect orientation metadata when
+present, then calibrate against visible landmarks. Mapbox does not provide the
+bike, fence and tree detail needed here; foreground masks remain necessary.
+Validate local coverage and supported geometry access before integration. See
+[Mapbox's 3D building example](https://docs.mapbox.com/mapbox-gl-js/example/3d-buildings/).
 
 ## Reactor X2 integration
 
@@ -102,7 +108,7 @@ take effect at generated block boundaries. See the
 [X2 overview](https://docs.reactor.inc/model-api-reference/x2/overview).
 
 The browser renderer should produce a capturable video source containing the
-panorama and guides, excluding controls and the scrubber. Verify that the chosen
+panorama and guides, excluding controls, the timeline and the debug toggle. Verify that the chosen
 imagery delivery and renderer support capture; a separately embedded panorama
 viewer cannot simply be assumed capturable.
 
@@ -117,13 +123,34 @@ state, reflecting the team's practical experience with X2. Include:
 
 Object IDs remain authoritative in scene data. Visible labels are visual cues,
 not a documented structured object-control channel. Test whether labels help
-X2 distinguish boxes or leak into the output. Identical black boxes can be
-ambiguous, particularly when they overlap.
+X2 distinguish boxes or leak into the output. Use distinct guide colours and descriptions to distinguish objects, especially
+when they overlap.
 
 Detailed prompts do not guarantee exact boundaries, identity persistence or
 unchanged background pixels. Those are acceptance criteria to measure, not
 capabilities to assume. The deterministic source render is the placement
 reference. Do not assume a fixed generation seed solves consistency.
+
+## Bounding volumes and debug display
+
+Viewer-facing bounds are very subtle, translucent and slightly holographic,
+showing approximate 3D shape and distance. A top-right Debug button toggles these
+bounds; default them off. This changes only their display visibility, preserving
+scene state and model guidance. Keep model-facing guides clear enough to
+condition generation independently of the faint debug styling.
+
+The intended object occupies its authored volume. Generation should appear
+inside its projected bounds. Prompting is not a hard spatial constraint:
+proposed enforcement is to composite generated video over the original
+photosphere only within visible projected object masks, keeping original pixels
+elsewhere. Apply foreground occlusion to these masks too. Test edge quality,
+clipped objects and restricted shadows before accepting this technique.
+
+This requires matching returned frames to source camera and object state.
+Current-camera masks over delayed video misalign as the phone turns. Establish
+frame/state correspondence or hold a matched presentation state before claiming
+strict containment. This is a validation requirement, not a verified X2 masking
+capability.
 
 ## Sessions, playback and latency
 
@@ -141,35 +168,28 @@ Measure phone-motion-to-output and edit-to-output delay on the actual Pixel 7.
 Model frame rate alone is not end-to-end latency. Show measured values if the
 demo displays latency. Slow camera motion is the starting assumption.
 
-The source timeline can seek immediately. Generated video has temporal state,
-so backwards seeking may need regeneration or session recovery and cannot be
-assumed to reproduce the earlier output exactly.
-
-Recommended, pending agreement: show the source panorama and boxes while the
-scrubber is dragged, then resume generation from the selected time on release.
-Prepared generated recordings can provide exact replay only for their recorded
-camera paths; they do not cover arbitrary phone viewing directions.
+The timeline displays elapsed animation time and event markers without seek
+interaction. Next advances hardcoded scene steps; the playback clock drives
+movement and loops. Test generation across loop boundaries: identical source
+frames do not guarantee identical generated output.
 
 ## Background source
 
-The existing experience uses Google Street View. Permission and technical
-access to stream that imagery through X2 remain unresolved. Google's published
-terms restrict extraction and creating content based on Maps content; do not
-assume the existing display integration authorises this transformation pipeline.
-See [Google Maps Platform terms](https://cloud.google.com/maps-platform/terms).
+Use the user's own Google Pixel 7 photosphere directly, replacing Google Street
+View imagery in this proposed pipeline. Host the original asset with the project
+and render it as the fixed panoramic background. No street-imagery API is needed
+for the background. Preserve original metadata before image optimisation.
 
-Preferred alternative for this one-location demo: capture and host an owned
-panorama. The viewer and manually aligned geometry can be constructed around
-that asset without a street-imagery API. A single screenshot can support a
-limited view but cannot establish accurate unseen surroundings for full rotation.
+Inspect GPS and photosphere projection, crop and orientation metadata on import.
+Validate full-sphere versus cropped coverage rather than assuming a 2:1 image.
+If GPS is absent, record a manually supplied camera location; if heading is
+absent, calibrate against landmarks. Do not infer coordinates from the earlier
+Street View screenshot.
 
-Mapillary is another candidate: its service is free and its imagery is offered
-under CC BY-SA. Check exact-location panorama coverage, applicable service terms,
-attribution and adaptation requirements before choosing it. See the
-[Mapillary FAQ](https://help.mapillary.com/hc/en-us/articles/8348198426396-Mapillary-FAQ)
-and [imagery licence](https://help.mapillary.com/hc/en-us/articles/115001770409-CC-BY-SA-license-for-open-data).
-KartaView is an additional coverage-dependent option with imagery adaptation
-terms described in its [terms](https://kartaview.org/terms).
+The original photosphere asset and GPS metadata have not yet been verified in
+this checkout. Source choice is settled; asset discovery and calibration remain
+implementation prerequisites. Mapbox supplies geographic context and rough
+geometry, not replacement background imagery.
 
 ## First validation slice
 
@@ -179,7 +199,7 @@ Compare the generated output with the source for position, scale, occlusion,
 background drift and orientation delay. Then correct an existing object's
 colour and facing direction while holding the camera fixed.
 
-Test looping and seeking separately. If X2 fails placement requirements, evaluate
+Test looping, timeline progress and the debug toggle separately. If X2 fails placement requirements, evaluate
 more recognisable guide shapes or directly rendered objects before expanding
 the story. These are fallback proposals, not changes to the agreed box approach.
 
@@ -188,24 +208,32 @@ The van reveal also needs a geometry test: rotating a symmetric rectangular box
 must actually change visibility. Any hidden person in the fictional demo must
 be authored explicitly; generated details are not recovered evidence.
 
-## Decisions still open
+## Remaining validation
 
-- Owned panorama, licensed alternative imagery, or authorised Google pipeline.
-- Acceptance of manually authored geometry and foreground occlusion masks.
-- Scrubber behaviour while generation catches up and correction persistence on loops.
-- Required placement tolerance and acceptable end-to-end latency.
-- Whether labelled black boxes provide adequate control in X2.
+- Locate the original photosphere and verify GPS, projection and orientation metadata.
+- Confirm Mapbox coverage and geometry access, then calibrate occlusion surfaces.
+- Verify X2 follows labelled volumes and preserves object identity.
+- Validate frame alignment and compositing for strict box containment.
+- Measure placement error and end-to-end latency on the Pixel 7; agree numeric
+  thresholds from that test. Accurate placement remains the priority.
 
-No new framework, map provider or generation dependency is selected or installed
-by this document. Implementation should extend the existing fixed-view product
-after these choices and the initial generation test are resolved.
+This revision updates the architecture only. It does not implement the panorama
+migration, UI changes or map integration, or install new dependencies.
+
+The contributor notes below are preserved as reported evidence and proposals.
+Part A above reflects the latest user decisions: owned Pixel 7 photosphere,
+Mapbox-assisted alignment where feasible, display-only timeline without
+scrubbing, and subtle bounds controlled by a top-right debug toggle. Older
+scrubbing references below are superseded. Reported model tests and prompt
+limits below still need to inform implementation and validation.
 
 ---
 
 # Part B — Zeus additions
 
 > **Author: Zeus** (Atilade's planning agent), added 12 Sep 2026 ~13:30. Everything above
-> this line is Part A, written by Jack's agent in `053de48`, and is unchanged. Part B records
+> this line is Part A, originally written by Jack's agent in `053de48` and since
+> revised to reflect the latest user decisions. Part B records
 > what Atilade and Zeus decided, what has been measured on the live APIs, and answers to the
 > open questions in Part A. Part C proposes how the two fit together; it needs Jack's
 > agreement before it is treated as settled.
