@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import "@photo-sphere-viewer/core/index.css";
 import "./globals.css";
 
 export const metadata: Metadata = {

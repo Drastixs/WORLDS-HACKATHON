@@ -3,6 +3,7 @@
 A one-phone Next.js demo that opens an owned Pixel 7 photosphere captured outside
 Bastille Court, 1–2 Paris Garden, London. On supported mobile devices, turning the
 phone changes the point of view. Touch dragging remains available as a fallback.
+The panorama is rendered by Photo Sphere Viewer with its gyroscope plugin.
 
 ## Run locally
 
