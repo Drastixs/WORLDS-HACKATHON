@@ -4,17 +4,18 @@ import { vanPrompt } from "./prompts.ts";
 
 test("the original van prompt puts its front toward the camera and fits the front plane", () => {
   const prompt = vanPrompt("white");
-  assert.match(prompt, /front faces directly toward the camera/i);
-  assert.match(prompt, /grille and bumper with the nearest upright end plane/i);
-  assert.match(prompt, /inside the guide/i);
-  assert.ok(prompt.length <= 1_000);
+  assert.match(prompt, /^Replace only the grey van-shaped guide at the right kerb/i);
+  assert.match(prompt, /front faces the camera/i);
+  assert.match(prompt, /grille and bumper align with the nearest upright plane at 90 degrees/i);
+  assert.match(prompt, /Preserve the street.+camera, and source motion/i);
+  assert.ok(prompt.length <= 600);
 });
 
 test("the corrected van prompt reverses with its rear toward the camera", () => {
   const prompt = vanPrompt("navy");
-  assert.match(prompt, /rear is nearest the camera/i);
-  assert.match(prompt, /perpendicular, at 90 degrees/i);
-  assert.match(prompt, /roof corners/i);
-  assert.match(prompt, /inside the guide/i);
-  assert.ok(prompt.length <= 1_000);
+  assert.match(prompt, /^Replace only the grey van-shaped guide at the right kerb/i);
+  assert.match(prompt, /rear faces the camera/i);
+  assert.match(prompt, /front points away along the long axis/i);
+  assert.match(prompt, /nearest end plane is at 90 degrees/i);
+  assert.ok(prompt.length <= 600);
 });

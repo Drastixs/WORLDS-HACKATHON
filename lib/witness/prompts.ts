@@ -15,62 +15,40 @@ export function assertSafeForReactor(prompt: string) {
   return prompt;
 }
 
-// One object in the scene, as the prompt describes it (architecture.md, Part A: each guide shape
-// and spatial location mapped to its description, scale, facing and appearance). The model-facing
-// frame carries no text labels, so objects are named by their guide's shape and place.
-type SceneObject = {
-  shape: string;
-  description: string;
-  placement: string;
-  orientation: string;
-  fit: string;
+// X2 conditions on three distinct inputs: the source owns scene and motion, the reference owns
+// appearance, and this prompt owns one transformation, one physical relationship and one short
+// preservation boundary. Keeping those responsibilities separate avoids contradictory signals.
+type X2PromptLayers = {
+  targetAndChange: string;
+  relationship: string;
+  preservation: string;
 };
 
-const VAN: Record<VanVariant, SceneObject> = {
+const VAN: Record<VanVariant, X2PromptLayers> = {
   white: {
-    shape: "van-shaped",
-    description: "a white panel van like the van in the reference image",
-    placement: "at the kerb on the right, in front of the low building",
-    orientation:
-      "The front faces directly toward the camera along the guide's long axis. Align the grille and " +
-      "bumper with the nearest upright end plane, perpendicular at 90 degrees to the long axis",
-    fit:
-      "Fit the van tightly to the complete grey guide: align the front bumper, grille, roof corners, " +
-      "side edges and tyre contact points with the corresponding guide boundary",
+    targetAndChange:
+      "Replace only the grey van-shaped guide at the right kerb with the white panel van from the reference image",
+    relationship:
+      "The parked van fills the guide exactly and stays still: its front faces the camera, its grille and bumper align with the nearest upright plane at 90 degrees to the long axis, and its tyres meet the lower edge",
+    preservation:
+      "Preserve the street, fence, buildings, trees, road, lighting, shadows, camera, and source motion",
   },
   navy: {
-    shape: "van-shaped",
-    description: "a dark navy blue panel van shaped like the van in the reference image",
-    placement: "at the kerb on the right, in front of the low building",
-    orientation:
-      "The rear is nearest the camera and the front points directly away along the guide's long axis. " +
-      "The rear plane is perpendicular, at 90 degrees, to that axis",
-    fit:
-      "Fit the van tightly to the complete grey guide: align its bumper, roof corners, side edges " +
-      "and tyre contact points with the corresponding guide boundary",
+    targetAndChange:
+      "Replace only the grey van-shaped guide at the right kerb with the dark navy panel van from the reference image",
+    relationship:
+      "The parked van fills the guide exactly and stays still: its rear faces the camera, its front points away along the long axis, its nearest end plane is at 90 degrees to that axis, and its tyres meet the lower edge",
+    preservation:
+      "Preserve the street, fence, buildings, trees, road, lighting, shadows, camera, and source motion",
   },
 };
 
-// Part A's detailed prompt template: the objects, background preservation with the existing
-// camera and lighting, motion and occlusion, then removing every guide and label.
-function buildPrompt(objects: SceneObject[]) {
-  const replacements = objects.map(
-    (object) =>
-      `Replace the grey ${object.shape} guide ${object.placement} with ${object.description}, ` +
-      `at exactly the same size and position. ${object.orientation}. ${object.fit}. ` +
-      "Keep every generated vehicle pixel inside the guide; do not extend beyond any edge or corner.",
-  );
+function composePrompt(layers: X2PromptLayers) {
   return assertSafeForReactor(
-    [
-      ...replacements,
-      "Keep the photographed pub, fence, buildings, trees, road, light, shadows and camera perspective unchanged.",
-      "Each object follows its guide's motion and stays hidden wherever something covers its " +
-        "guide. A parked vehicle stays parked and still.",
-      "Remove every grey guide shape completely.",
-    ].join(" "),
+    `${layers.targetAndChange}. ${layers.relationship}. ${layers.preservation}.`,
   );
 }
 
 export function vanPrompt(variant: VanVariant) {
-  return buildPrompt([VAN[variant]]);
+  return composePrompt(VAN[variant]);
 }
