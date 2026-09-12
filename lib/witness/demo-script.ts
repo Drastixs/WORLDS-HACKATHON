@@ -37,7 +37,7 @@ export const WITNESS_DEMO_SCRIPT: PlaybackScript = {
         kind: "person",
         description: "Figure crossing",
         anchor: { textureX: 3200, textureY: 2450, depthM: 20.4662 },
-        dimensionsM: { width: 0.65, height: 1.75, depth: 0.45 },
+        dimensionsM: { width: 0.85, height: 1.75, depth: 0.45 },
         yawRad: 0,
         appearance: { color: "dark" },
         approximate: true,
@@ -85,15 +85,15 @@ export const WITNESS_DEMO_SCRIPT: PlaybackScript = {
     {
       id: "figure-crosses",
       label: "A figure crosses by the postbox",
-      durationMs: 5_000,
+      durationMs: 4_000,
       visibleObjectIds: ["parked-van-01", "crossing-person-01"],
       paths: [
         {
           objectId: "crossing-person-01",
           keyframes: [
             { atMs: 0, anchor: { textureX: 3200, textureY: 2450, depthM: 20.4662 }, yawRad: 0 },
-            { atMs: 2_500, anchor: { textureX: 3700, textureY: 2450, depthM: 20.4662 }, yawRad: 0 },
-            { atMs: 5_000, anchor: { textureX: 4250, textureY: 2450, depthM: 20.4662 }, yawRad: 0 },
+            { atMs: 2_000, anchor: { textureX: 3700, textureY: 2450, depthM: 20.4662 }, yawRad: 0 },
+            { atMs: 4_000, anchor: { textureX: 4250, textureY: 2450, depthM: 20.4662 }, yawRad: 0 },
           ],
         },
       ],

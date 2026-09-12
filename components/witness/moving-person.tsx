@@ -6,13 +6,13 @@ import { projectSceneObject } from "../../lib/witness/scene-projection";
 import { projectOcclusionMask, occlusionMasksForObject } from "../../lib/witness/occlusion";
 import type { SceneExport } from "../../lib/witness/scene";
 
-export function MovingPerson({ viewer, scene, loopTimeMs, visible, debug, onDebugChange }: {
-  viewer: Viewer | null; scene: SceneExport; loopTimeMs: number; visible: boolean; debug: boolean; onDebugChange: (value: boolean) => void;
+export function MovingPerson({ viewer, scene, loopTimeMs, durationMs, visible, debug, onDebugChange }: {
+  viewer: Viewer | null; scene: SceneExport; loopTimeMs: number; durationMs: number; visible: boolean; debug: boolean; onDebugChange: (value: boolean) => void;
 }) {
   const [clip, setClip] = useState<PersonClip | undefined>(cachedPersonClip);
   const [status, setStatus] = useState(""); const [busy, setBusy] = useState(false);
   const canvas = useRef<HTMLCanvasElement>(null); const request = useRef<AbortController | null>(null);
-  const current = useRef({ scene, loopTimeMs }); current.current = { scene, loopTimeMs };
+  const current = useRef({ scene, loopTimeMs, durationMs }); current.current = { scene, loopTimeMs, durationMs };
   useEffect(() => () => request.current?.abort(), []);
   useEffect(() => { if (!visible) request.current?.abort(); }, [visible]);
   async function start() {
@@ -30,10 +30,10 @@ export function MovingPerson({ viewer, scene, loopTimeMs, visible, debug, onDebu
       const { width, height } = viewer.getSize(); const dpr = Math.min(devicePixelRatio, 2);
       if (c.width !== Math.round(width * dpr) || c.height !== Math.round(height * dpr)) { c.width = Math.round(width * dpr); c.height = Math.round(height * dpr); }
       const ctx = c.getContext("2d")!; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, width, height);
-      const { scene, loopTimeMs } = current.current;
+      const { scene, loopTimeMs, durationMs } = current.current;
       const person = scene.objects.find(o => o.id === "crossing-person-01"); if (!person) return;
       const projection = projectSceneObject(viewer, person); if (!projection) return;
-      const image = clip.frames[Math.floor((loopTimeMs % clip.durationMs) / clip.durationMs * clip.frames.length)];
+      const image = clip.frames[Math.floor((loopTimeMs % durationMs) / durationMs * clip.frames.length)];
       const b = projection.bounds, s = clip.bounds;
       ctx.drawImage(image, s.x, s.y, s.width, s.height, b.x, b.y, b.width, b.height);
       ctx.save(); ctx.globalCompositeOperation = "destination-out";

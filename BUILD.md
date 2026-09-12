@@ -18,7 +18,8 @@ The architecture and team interfaces are defined in
   cache at most 120 small RGBA frames in browser memory. H3 supplies walking motion;
   the existing evaluated person cuboid supplies position and size. The existing
   foreground fence polygon erases occluded pixels from the person layer. The static
-  van stays visible. Five-second path and sprite playback share the statement clock.
+  van stays visible. The four-second path and sprite playback share the statement clock (25% faster
+  than the original five-second crossing); the person box is 0.85 m wide.
   No model calls occur on subsequent loops or Restart. Refresh clears these caches.
   Cancel, leaving statement 2 and unmount stop capture and close the H3 session.
 

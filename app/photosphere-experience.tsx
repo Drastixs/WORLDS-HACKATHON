@@ -222,7 +222,7 @@ function PhotosphereExperienceContent() {
       {entered && status === "ready" ? (
         <>
           <StaticVanLayer viewer={viewerRef.current} visible={playback.stepIndex <= 1} controls={playback.stepIndex === 0} debug={debugVisible} onDebugChange={setDebugVisible} />
-          <MovingPerson viewer={viewerRef.current} scene={playback.scene} loopTimeMs={playback.loopTimeMs} visible={playback.stepIndex === 1} debug={debugVisible} onDebugChange={setDebugVisible} />
+          <MovingPerson viewer={viewerRef.current} scene={playback.scene} loopTimeMs={playback.loopTimeMs} durationMs={playback.step.durationMs} visible={playback.stepIndex === 1} debug={debugVisible} onDebugChange={setDebugVisible} />
           {playback.stepIndex > 1 && <><X2Overlay poseRef={poseRef} sceneRevision={sceneRevision} />
           <WitnessControls
             debug={debugVisible}

@@ -27,13 +27,14 @@ test("densifies every polygon edge within the projection limit", () => {
 test("the authored figure passes behind the enclosure and reappears", () => {
   const playback = createPlayback(WITNESS_DEMO_SCRIPT);
   const stepTwo = { ...playback, stepIndex: 1 };
+  const durationMs = WITNESS_DEMO_SCRIPT.steps[1].durationMs;
   const figureAt = (elapsedMs: number) =>
     evaluatePlayback(stepTwo, elapsedMs).scene.objects.find((object) => object.id === "crossing-person-01")!;
 
   assert.equal(texturePointInPolygon(figureAt(0).anchor, enclosure.texturePolygon), false);
-  assert.equal(texturePointInPolygon(figureAt(2_500).anchor, enclosure.texturePolygon), true);
-  assert.equal(texturePointInPolygon(figureAt(4_999).anchor, enclosure.texturePolygon), false);
-  assert.equal(texturePointInPolygon(figureAt(7_500).anchor, enclosure.texturePolygon), true);
+  assert.equal(texturePointInPolygon(figureAt(durationMs / 2).anchor, enclosure.texturePolygon), true);
+  assert.equal(texturePointInPolygon(figureAt(durationMs - 1).anchor, enclosure.texturePolygon), false);
+  assert.equal(texturePointInPolygon(figureAt(durationMs * 1.5).anchor, enclosure.texturePolygon), true);
   assert.deepEqual(occlusionMasksForObject([enclosure], "crossing-person-01"), [enclosure]);
   assert.deepEqual(occlusionMasksForObject([enclosure], "parked-van-01"), []);
 });
