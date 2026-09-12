@@ -1,7 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useWitnessX2 } from "../../lib/witness/x2";
+import {
+  getReconstructionMode,
+  subscribeReconstructionMode,
+  witnessLoopCache,
+} from "./loop-cache";
 
 const STATUS_LABELS = {
   idle: "Not started",
@@ -19,11 +24,18 @@ export function WitnessControls({
 }) {
   const x2 = useWitnessX2();
   const [correcting, setCorrecting] = useState(false);
+  const reconstructionMode = useSyncExternalStore(
+    subscribeReconstructionMode,
+    getReconstructionMode,
+    getReconstructionMode,
+  );
 
   const toggleVariant = async () => {
     setCorrecting(true);
     try {
-      await x2.setVariant(x2.variant === "white" ? "navy" : "white");
+      const nextVariant = x2.variant === "white" ? "navy" : "white";
+      witnessLoopCache.invalidate((entry) => entry.variant !== nextVariant);
+      await x2.setVariant(nextVariant);
     } finally {
       setCorrecting(false);
     }
@@ -62,6 +74,7 @@ export function WitnessControls({
           onClick={() => onDebugChange(!debug)}
         >
           <span>Debug</span>
+          {debug ? <small className="witness-controls__mode">{reconstructionMode}</small> : null}
           <span className="witness-controls__switch" aria-hidden="true" />
         </button>
 

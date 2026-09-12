@@ -619,3 +619,14 @@ h1 {
     bottom: max(4.25rem, calc(env(safe-area-inset-bottom) + 3.25rem));
   }
 }
+
+/* Cached reconstruction diagnostics */
+.witness-controls__mode {
+  margin-left: auto;
+  margin-right: 0.65rem;
+  color: oklch(0.7 0.035 100);
+  font-size: 0.62rem;
+  font-weight: 720;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
