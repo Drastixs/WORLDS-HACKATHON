@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 
 import { ScenePlaybackControls } from "../components/witness/scene-playback-controls";
 import { ModelFeedInspector } from "../components/witness/model-feed-inspector";
 import { WitnessControls } from "../components/witness/witness-controls";
+import { StaticVanLayer } from "../components/witness/static-van";
 import { X2Overlay } from "../components/witness/x2-overlay";
 import { witnessLoopCache } from "../components/witness/loop-cache";
 import { WITNESS_DEMO_SCRIPT } from "../lib/witness/demo-script";
@@ -219,12 +220,14 @@ function PhotosphereExperienceContent() {
 
       {entered && status === "ready" ? (
         <>
-          <X2Overlay poseRef={poseRef} sceneRevision={sceneRevision} />
+          <StaticVanLayer viewer={viewerRef.current} visible={playback.stepIndex === 0} debug={debugVisible} onDebugChange={setDebugVisible} />
+          {playback.stepIndex !== 0 && <><X2Overlay poseRef={poseRef} sceneRevision={sceneRevision} />
           <WitnessControls
             debug={debugVisible}
             corrected={playback.corrected}
             onDebugChange={setDebugVisible}
           />
+          </>}
           <ModelFeedInspector visible={debugVisible} />
           <ScenePlaybackControls
             stepIndex={playback.stepIndex}

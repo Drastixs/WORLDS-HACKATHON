@@ -42,6 +42,7 @@ export type ModelFeed = {
   setPose(pose: ViewPose): void;
   setMirrored(mirrored: boolean): void;
   setSceneFrame(frame: ModelSceneFrame): void;
+  sphericalPoint(x: number, y: number): { yaw: number; pitch: number };
   currentGuide(): ProjectedGuide | null;
   currentMask(): HTMLCanvasElement;
   inspection(): ModelFeedInspection;
@@ -261,6 +262,7 @@ export async function createModelFeed(panoramaUrl: string, initialPose: ViewPose
     setSceneFrame(next) {
       sceneFrame = next;
     },
+    sphericalPoint: (x, y) => viewer.dataHelper.viewerCoordsToSphericalCoords({ x, y }),
     currentGuide: () => legacyGuide,
     currentMask: () => mask,
     inspection: () => ({ background, composite, mask, frame }),
