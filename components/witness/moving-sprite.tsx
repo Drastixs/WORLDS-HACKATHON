@@ -4,11 +4,12 @@ import type { Viewer } from "@photo-sphere-viewer/core";
 import type { SpriteClip } from "../../lib/witness/h3-sprite";
 import { projectSceneObject } from "../../lib/witness/scene-projection";
 import { projectOcclusionMask, occlusionMasksForObject } from "../../lib/witness/occlusion";
+import type { SceneObject } from "../../lib/witness/scene";
 import type { SceneExport } from "../../lib/witness/scene";
 
 export function MovingSprite({ viewer, scene, loopTimeMs, durationMs, visible, debug, onDebugChange, objectId, label, cachedClip, generateClip, controls = true, frozen = false }: {
   objectId: string; label: string; cachedClip: () => SpriteClip | undefined;
-  generateClip: (signal: AbortSignal, progress: (text: string) => void) => Promise<SpriteClip>;
+  generateClip: (signal: AbortSignal, progress: (text: string) => void, context?: { viewer: Viewer; scene: SceneExport; object: SceneObject }) => Promise<SpriteClip>;
   controls?: boolean; frozen?: boolean;
   viewer: Viewer | null; scene: SceneExport; loopTimeMs: number; durationMs: number; visible: boolean; debug: boolean; onDebugChange: (value: boolean) => void;
 }) {
@@ -20,7 +21,9 @@ export function MovingSprite({ viewer, scene, loopTimeMs, durationMs, visible, d
   useEffect(() => { if (!visible || !controls) request.current?.abort(); }, [visible, controls]);
   async function start() {
     if (busy || clip) return; const controller = new AbortController(); request.current = controller; setBusy(true);
-    try { const result = await generateClip(controller.signal, setStatus); if (!controller.signal.aborted) setClip(result); }
+    try { const object = current.current.scene.objects.find(o => o.id === objectId);
+      if (!viewer || !object) throw new Error("Scene object is not ready");
+      const result = await generateClip(controller.signal, setStatus, { viewer, scene: current.current.scene, object }); if (!controller.signal.aborted) setClip(result); }
     catch (e) { if (!controller.signal.aborted) setStatus(e instanceof Error ? e.message : String(e)); }
     finally { if (request.current === controller) setBusy(false); }
   }

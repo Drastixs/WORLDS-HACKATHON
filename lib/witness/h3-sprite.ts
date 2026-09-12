@@ -4,6 +4,7 @@ import { H3_MODEL, H3_SEED } from "./h3-test";
 export type SpriteClip = { frames: HTMLCanvasElement[]; durationMs: number; bounds: { x: number; y: number; width: number; height: number } };
 type SpriteOptions = {
   label: string; prompt: string; aspect: "9:16" | "16:9"; width: number; height: number;
+  cropBounds?: { x: number; y: number; width: number; height: number };
   reference(ctx: CanvasRenderingContext2D, width: number, height: number): void;
 };
 export function createSpriteGenerator(options: SpriteOptions) {
@@ -34,7 +35,7 @@ async function generate(signal: AbortSignal, progress: (text: string) => void): 
         if (done) return; done = true; clearTimeout(timeout); signal.removeEventListener("abort", abort);
         if (error) { reject(error); return; }
         if (frames.length < 20 || maxX <= minX || maxY <= minY) { reject(new Error(`H3 did not produce a usable ${options.label} clip. Try again.`)); return; }
-        cached = { frames, durationMs: 5000, bounds: { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 } };
+        cached = { frames, durationMs: 5000, bounds: options.cropBounds ?? { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 } };
         resolve(cached);
       };
       const abort = () => finish(new Error("Generation cancelled"));

@@ -25,7 +25,13 @@ The architecture and team interfaces are defined in
 
 - **Statement 3 — implemented, awaiting user visual test:** a dark car driving-in-place
   clip uses the same chroma extraction and bounded frame cache as the person, with a
-  landscape reference and left-facing vehicle prompt. The car follows the existing
+  landscape reference. The orientation update snapshots all eight live projected debug
+  corners, current camera pose/FOV, dimensions, yaw and authored path keyframes into
+  the prompt. Its reference shows the actual cuboid, with a red front face and blue
+  rear face. A uniform scale preserves perspective when moving debug coordinates
+  into reference-image pixels. Playback uses that reference rectangle rather than
+  stretching the generated alpha bounds. This supersedes the fixed left-facing
+  side-profile prompt. Look toward the car box before requesting generation. The car follows the existing
   five-second path and projected box. The static van persists and the cached person
   holds its final walking frame at the completed crossing position. Car loops and
   Restart reuse the same cached frames. Leaving the active generation step cancels
@@ -349,3 +355,9 @@ pipeline.
 **Next action:** inspect one real annotation export and the generation adapter,
 then implement Stage 1. No stage is marked integration-tested yet; existing components and reported
 model tests remain useful starting evidence.
+
+**Car orientation update:** production build and 22 scene/geometry tests pass.
+Refresh clears the old side-profile clip; regenerate statement 3 while looking at
+its box. H3 adherence to the new front-face geometry awaits user visual testing.
+A cached sprite still holds the generation-time viewing angle; it is not multi-view
+3D output and does not dynamically regenerate as the camera turns.
