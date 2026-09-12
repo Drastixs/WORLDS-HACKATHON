@@ -3,11 +3,17 @@
 # dependencies
 node_modules/
 
-# Expo
+# Next.js
+.next/
+out/
+
+# Previous Expo/native generated output
 .expo/
 dist/
 web-build/
 expo-env.d.ts
+/ios
+/android
 
 # Native
 .kotlin/
@@ -36,6 +42,5 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
-# generated native folders
-/ios
-/android
+# local environment
+.env
