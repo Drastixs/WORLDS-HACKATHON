@@ -17,6 +17,9 @@ export type SceneObject = {
     depth: number;
   };
   yawRad: number;
+  appearance?: {
+    color?: string;
+  };
   approximate: boolean;
 };
 
@@ -81,6 +84,7 @@ export const STAGE_ONE_SCENE = validateSceneExport({
       anchor: { textureX: 5150, textureY: 2438, depthM: 10.5 },
       dimensionsM: { width: 4.8, height: 2.15, depth: 2.05 },
       yawRad: Math.PI / 2,
+      appearance: { color: "white" },
       approximate: true,
     },
   ],

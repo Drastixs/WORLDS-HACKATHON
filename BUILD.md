@@ -14,6 +14,19 @@ Sphere Viewer and its gyroscope plugin, with touch dragging available. Reuse it.
 The image includes projection, crop and heading metadata, but inspection found
 no EXIF GPS coordinates. Mapbox alignment needs a supplied camera location.
 
+## Completed checkpoints
+
+- **Stage 1 — complete (`8a8fc00`):** a versioned scene contract and subtle
+  viewer-projected 3D debug volume are integrated. Placement remained fixed
+  through drag, resize and Debug visibility checks. The object measurements are
+  explicitly approximate because no annotation export is present yet.
+- **Stage 2 — complete:** four deterministic, looping statement steps now drive
+  absolute-time object paths, Next, Restart, a display-only timeline, staged
+  object visibility and the van correction. Nine focused scene/playback tests,
+  TypeScript, the production build and a Pixel 7 user test pass. The movement
+  anchors remain a replaceable hardcoded fixture until the annotation export
+  lands; Stage 2 does not claim moving X2 output alignment.
+
 ## Ownership
 
 | Owner | Work |

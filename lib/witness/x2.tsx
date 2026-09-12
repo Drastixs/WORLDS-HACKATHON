@@ -132,6 +132,7 @@ function WitnessX2Session({ children }: { children: ReactNode }) {
 
   const setVariant = useCallback(
     async (next: VanVariant) => {
+      if (variantRef.current === next) return;
       variantRef.current = next;
       setVariantState(next);
       feed.current?.setMirrored(next === "navy");
@@ -141,10 +142,11 @@ function WitnessX2Session({ children }: { children: ReactNode }) {
       try {
         await x2.setPrompt({ prompt: vanPrompt(next) });
       } catch (caught) {
+        update("error");
         setError(describeError(caught));
       }
     },
-    [x2],
+    [update, x2],
   );
 
   const stop = useCallback(async () => {

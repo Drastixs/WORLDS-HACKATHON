@@ -3,11 +3,14 @@
 import { events, Viewer } from "@photo-sphere-viewer/core";
 import { GyroscopePlugin } from "@photo-sphere-viewer/gyroscope-plugin";
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from "react";
+import { ScenePlaybackControls } from "../components/witness/scene-playback-controls";
 import { WitnessControls } from "../components/witness/witness-controls";
 import { X2Overlay } from "../components/witness/x2-overlay";
+import { witnessLoopCache } from "../components/witness/loop-cache";
+import { WITNESS_DEMO_SCRIPT } from "../lib/witness/demo-script";
 import { currentPose, type ViewPose } from "../lib/witness/geometry";
-import { STAGE_ONE_SCENE } from "../lib/witness/scene";
-import { WitnessX2Provider } from "../lib/witness/x2";
+import { useScenePlayback } from "../lib/witness/use-scene-playback";
+import { useWitnessX2, WitnessX2Provider } from "../lib/witness/x2";
 import { SceneDebugOverlay } from "./scene-debug-overlay";
 
 const PANORAMA_URL = "/bastille-court-photosphere.jpg";
@@ -101,6 +104,17 @@ function PhotosphereExperienceContent() {
   const [debugVisible, setDebugVisible] = useState(false);
   const poseRef = useRef<ViewPose>({ yaw: 0, pitch: 0, zoom: 45 });
   const viewerRef = useRef<Viewer | null>(null);
+  const syncedVariantRef = useRef<"white" | "navy" | null>(null);
+  const playback = useScenePlayback(WITNESS_DEMO_SCRIPT);
+  const x2 = useWitnessX2();
+
+  useEffect(() => {
+    const variant = playback.corrected ? "navy" : "white";
+    if (syncedVariantRef.current === variant) return;
+    syncedVariantRef.current = variant;
+    witnessLoopCache.invalidate((entry) => entry.variant !== variant);
+    void x2.setVariant(variant);
+  }, [playback.corrected, x2.setVariant]);
 
   const handleReady = useCallback(() => setStatus("ready"), []);
   const handleError = useCallback(() => {
@@ -112,6 +126,7 @@ function PhotosphereExperienceContent() {
     setEntered(true);
     setStatus("loading");
     setDebugVisible(false);
+    playback.restart();
 
     if (document.documentElement.requestFullscreen) {
       void document.documentElement.requestFullscreen().catch(() => undefined);
@@ -121,6 +136,7 @@ function PhotosphereExperienceContent() {
   const tryAgain = () => {
     setStatus("loading");
     setDebugVisible(false);
+    playback.restart();
     setEntered(false);
     window.requestAnimationFrame(() => setEntered(true));
   };
@@ -134,11 +150,14 @@ function PhotosphereExperienceContent() {
         poseRef={poseRef}
         viewerRef={viewerRef}
       />
-      <SceneDebugOverlay
-        viewer={viewerRef.current}
-        object={STAGE_ONE_SCENE.objects[0]}
-        visible={status === "ready" && debugVisible}
-      />
+      {playback.scene.objects.map((object) => (
+        <SceneDebugOverlay
+          key={object.id}
+          viewer={viewerRef.current}
+          object={object}
+          visible={status === "ready" && debugVisible}
+        />
+      ))}
 
       {!entered ? (
         <section className="welcome" aria-labelledby="welcome-title">
@@ -178,7 +197,22 @@ function PhotosphereExperienceContent() {
       {entered && status === "ready" ? (
         <>
           <X2Overlay poseRef={poseRef} />
-          <WitnessControls debug={debugVisible} onDebugChange={setDebugVisible} />
+          <WitnessControls
+            debug={debugVisible}
+            corrected={playback.corrected}
+            onDebugChange={setDebugVisible}
+          />
+          <ScenePlaybackControls
+            stepIndex={playback.stepIndex}
+            totalSteps={playback.totalSteps}
+            label={playback.step.label}
+            elapsedMs={playback.elapsedMs}
+            durationMs={playback.step.durationMs}
+            progress={playback.progress}
+            isFinalStep={playback.isFinalStep}
+            onNext={playback.next}
+            onRestart={playback.restart}
+          />
 
           <div className="place-label">
             <span className="location-dot" aria-hidden="true" />

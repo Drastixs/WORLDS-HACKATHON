@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import { useWitnessX2 } from "../../lib/witness/x2";
 import {
   getReconstructionMode,
   subscribeReconstructionMode,
-  witnessLoopCache,
 } from "./loop-cache";
 
 const STATUS_LABELS = {
@@ -17,29 +16,19 @@ const STATUS_LABELS = {
 
 export function WitnessControls({
   debug,
+  corrected,
   onDebugChange,
 }: {
   debug: boolean;
+  corrected: boolean;
   onDebugChange: (visible: boolean) => void;
 }) {
   const x2 = useWitnessX2();
-  const [correcting, setCorrecting] = useState(false);
   const reconstructionMode = useSyncExternalStore(
     subscribeReconstructionMode,
     getReconstructionMode,
     getReconstructionMode,
   );
-
-  const toggleVariant = async () => {
-    setCorrecting(true);
-    try {
-      const nextVariant = x2.variant === "white" ? "navy" : "white";
-      witnessLoopCache.invalidate((entry) => entry.variant !== nextVariant);
-      await x2.setVariant(nextVariant);
-    } finally {
-      setCorrecting(false);
-    }
-  };
 
   return (
     <>
@@ -56,16 +45,10 @@ export function WitnessControls({
           </button>
         ) : null}
 
-        <button
-          className="witness-controls__correction"
-          type="button"
-          aria-pressed={x2.variant === "navy"}
-          disabled={correcting || x2.status === "connecting"}
-          onClick={() => void toggleVariant()}
-        >
+        <div className="witness-controls__correction" data-applied={corrected}>
           <span>The van was dark, facing the other way</span>
-          <small>{x2.variant === "navy" ? "Correction applied" : "White van · original"}</small>
-        </button>
+          <small>{corrected ? "Correction applied" : "Waiting for statement"}</small>
+        </div>
 
         <button
           className="witness-controls__debug"

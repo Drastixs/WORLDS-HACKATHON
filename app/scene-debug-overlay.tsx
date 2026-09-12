@@ -1,6 +1,6 @@
 "use client";
 
-import { events, type Viewer } from "@photo-sphere-viewer/core";
+import type { Viewer } from "@photo-sphere-viewer/core";
 import { useEffect, useRef } from "react";
 import { CUBOID_EDGES, CUBOID_FACES, projectSceneObject } from "../lib/witness/scene-projection";
 import type { SceneObject } from "../lib/witness/scene";
@@ -19,24 +19,31 @@ export function SceneDebugOverlay({
   visible: boolean;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
+  const objectRef = useRef(object);
   const lineRef = useRef<SVGPathElement>(null);
   const faceRefs = useRef<(SVGPolygonElement | null)[]>([]);
   const labelRef = useRef<SVGGElement>(null);
+
+  useEffect(() => {
+    objectRef.current = object;
+  }, [object]);
 
   useEffect(() => {
     if (!viewer || !svgRef.current || !lineRef.current) return;
 
     let frame = 0;
     const draw = () => {
-      frame = 0;
       const svg = svgRef.current;
       const line = lineRef.current;
       if (!svg || !line) return;
       const { width, height } = viewer.getSize();
       svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-      const projection = visible ? projectSceneObject(viewer, object) : null;
+      const projection = visible ? projectSceneObject(viewer, objectRef.current) : null;
       svg.style.display = projection ? "block" : "none";
-      if (!projection) return;
+      if (!projection) {
+        frame = window.requestAnimationFrame(draw);
+        return;
+      }
 
       line.setAttribute(
         "d",
@@ -53,20 +60,13 @@ export function SceneDebugOverlay({
         "transform",
         `translate(${projection.bounds.x.toFixed(1)} ${(projection.bounds.y - 14).toFixed(1)})`,
       );
+      frame = window.requestAnimationFrame(draw);
     };
-    const scheduleDraw = () => {
-      if (!frame) frame = window.requestAnimationFrame(draw);
-    };
-
-    viewer.addEventListener(events.RenderEvent.type, scheduleDraw);
-    viewer.addEventListener(events.SizeUpdatedEvent.type, scheduleDraw);
-    scheduleDraw();
+    frame = window.requestAnimationFrame(draw);
     return () => {
-      viewer.removeEventListener(events.RenderEvent.type, scheduleDraw);
-      viewer.removeEventListener(events.SizeUpdatedEvent.type, scheduleDraw);
       if (frame) window.cancelAnimationFrame(frame);
     };
-  }, [object, viewer, visible]);
+  }, [viewer, visible]);
 
   return (
     <svg ref={svgRef} className="scene-debug" aria-hidden="true" style={{ display: "none" }}>
