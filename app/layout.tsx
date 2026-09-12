@@ -1,18 +1,16 @@
 import type { Metadata, Viewport } from "next";
-import "@photo-sphere-viewer/core/index.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Paris Garden | Look Around",
-  description: "A motion-controlled photosphere experience at Bastille Court.",
+  title: "Witness | Timed Transcript",
+  description: "A timed transcript of Mrs Petru's witness statement.",
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
   viewportFit: "cover",
-  themeColor: "#171813",
+  themeColor: "#111211",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

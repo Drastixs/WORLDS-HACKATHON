@@ -1,5 +1,5 @@
-import { PhotosphereExperience } from "./photosphere-experience";
+import { TranscriptPlayer } from "./transcript-player";
 
 export default function Home() {
-  return <PhotosphereExperience />;
+  return <TranscriptPlayer />;
 }
