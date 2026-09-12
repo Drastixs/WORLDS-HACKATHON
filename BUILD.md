@@ -27,8 +27,11 @@ X2. This exception to the original X2-only plan tests H3 before any pipeline mig
 
 **Observed:** a real Chromium session uploaded the reference, generated a front-facing
 white van, completed playback, disconnected, and replayed the recorded output. Frame
-selection works. H3 alters details in the raw street output; inspect the raw frame as
-well as the crop before approving placement quality. TypeScript and 20 scene tests pass.
+selection works. A second completed run through the production Tailscale URL showed
+a correctly front-facing van growing substantially beyond the grey guide by the final
+frame. H3 also alters raw street details. Appearance is demonstrated; stationary scale
+and box-fit consistency are **not passed**. The mask can clip an incorrectly sized van
+and does not correct it. TypeScript, the production build and 20 scene tests pass.
 
 **Test gate:** open `/h3-test` in Chromium, press **Generate one clip**, wait for
 **Complete**, then play/pause the local recording and press **Capture replay frame**.
