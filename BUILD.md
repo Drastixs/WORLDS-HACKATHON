@@ -29,6 +29,63 @@ The latest teammate update also reports `lib/witness/geometry.ts`, `contract.ts`
 verify these at the relevant stages. Stages are ordered integration/test gates;
 existing teammate components do not need rebuilding to satisfy them.
 
+## Two-agent implementation split
+
+Split implementation by ownership, not alternating stages. The teammate roles
+above describe existing upstream work; these two agents integrate and extend it.
+
+| Agent | Stages | Responsibility |
+|---|---|---|
+| Agent 1: Scene and playback | 1–4 | Annotation import, scene state, camera alignment, controls, deterministic movement, occlusion, guide frames and masks. |
+| Agent 2: Generation and replay | 5–8 | Existing X2 client/compositor integration, output alignment, cached loops, view changes and stale-result handling. |
+| Agent 1 leads, Agent 2 supports | 9 | Full integration and Pixel 7 rehearsal; Agent 2 resolves generation/cache failures. |
+
+### Shared interface before implementation
+
+Agent 1 owns the shared contract file; Agent 2 reviews it before either builds
+against it. Reuse the existing `lib/witness/contract.ts` where appropriate.
+Agree these inputs and outputs:
+
+- Scene: stable object IDs, transforms, dimensions, paths, step and correction revision.
+- Renderer: source video, clean background, masks, camera pose, field of view
+  and animation timestamps, with explicit units and coordinate conventions.
+- Generation: output video, readiness/error state and available timing metadata.
+  Local frame IDs are not assumed to be echoed by X2.
+
+Agent 1 starts with the real annotation export. Agent 2 can work concurrently
+using the existing stationary-van feed to integrate X2 and develop caching.
+The moving-object compositing gate waits for Agent 1's matching masks and timing.
+Independent work may proceed, but dependent stages are not complete until their
+upstream inputs and test gates pass.
+
+### File ownership and commits
+
+Before edits, list the exact existing files each agent will own. Agent 1 owns
+scene data, renderer/model-feed changes, shared contract and scene controls.
+Agent 2 owns X2 session, compositor and cache changes. Agent 1 performs shared
+page integration; Agent 2 supplies components and documents required props.
+Resolve overlap with the teammates' active files before modifying them.
+
+Both agents work on `main` as requested. Serialise Git staging and commits;
+stage explicit owned paths only. Neither agent may reset, discard, overwrite or
+commit the other's unreviewed changes. Shared-file edits require an explicit
+handoff. Check the combined tree after integrating each slice.
+
+### Agent 1 assignment
+
+> Own BUILD.md stages 1–4. Reuse the annotation teammate's export and existing
+> viewer/geometry modules. Deliver deterministic scene playback, controls,
+> occlusion and synchronised generation inputs. Coordinate the shared interface
+> with Agent 2. Do not modify X2 session or cache code. Lead Stage 9 integration.
+
+### Agent 2 assignment
+
+> Own BUILD.md stages 5–8. Reuse the generation teammate's X2 client and
+> Prometheus-w compositor. Deliver aligned masked output, cached loops and
+> view-change handling. X2 only. Start with the existing stationary feed;
+> integrate moving scene inputs when Agent 1 supplies them. Do not rebuild
+> annotation or scene controls. Support Stage 9 generation/cache fixes.
+
 ## Stage 1: Shared scene data and one stationary object
 
 Import one object from the annotation teammate's export. Define stable IDs,
