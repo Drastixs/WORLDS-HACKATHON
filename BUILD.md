@@ -50,7 +50,35 @@ no EXIF GPS coordinates. Mapbox alignment needs a supplied camera location.
   also swaps to a navy reference. Checked in headless Chrome at 1440×900
   (`scripts/witness/stage5-live-test.ps1`, evidence `docs/evidence/stage5-*`); not yet on a
   physical Pixel 7. On a desktop with no motion sensor the gyroscope plugin ignores programmatic
-  rotation, so the test stops it first; worth checking that desktop dragging still turns the view.
+  rotation, so the test stops it first; desktop dragging does still turn the view (400 px → 24°).
+- **Stage 7 — partial, stationary van only (Zeus + Prometheus-w, `8dac331`, `1a80f67`):** a
+  bounded loop cache records 4 s of X2 output per settled view with its mask, replays it through
+  that mask, keys entries by view and variant, drops old-variant entries on a correction and
+  records nothing for 6 s after one. Live check: after the correction Debug read "cached" and
+  showed the navy van. Not yet: loop-boundary validation, a scene revision in the key (Restart
+  keeps `"v1"`), moving objects.
+- **Stage 8 — partial (Prometheus-w, `9900ac4`, `8dac331`):** settle detection (600 ms under
+  0.5°, no request per sensor sample), a 3° view tolerance, "Updating reconstruction" while the
+  view moves, cached reuse on return, and recordings discarded if the view or variant changes
+  mid-take. Not yet live-tested across several directions or on a Pixel 7.
+
+### Handoff notes from Agent 2 (Zeus), 15:15
+
+1. **Start facing the scene.** The van is at yaw ≈ 2.01 rad (115°) from the viewer's start;
+   the figure and car are nearby. Opening with `defaultYaw` ≈ 2.0 saves the judge a large turn.
+2. **One van placement.** The Debug volume and `VAN_GUIDE` in `lib/witness/geometry.ts`
+   (photosphere pixels) currently disagree slightly. Stage 4 should drive the model-facing guide
+   from scene data and retire `VAN_GUIDE`.
+3. **Stage 4 plugs into the existing feed.** `lib/witness/model-feed.ts` renders the model-facing
+   frame (hidden 1472×832 Photo Sphere Viewer) and `feedGuide()` is the compositing mask; replace
+   the grey silhouette with renderer guides and masks behind the same contract.
+4. **X2 returns no frame tags** (294 tagged frames in, 0 out), so there is no per-frame
+   correspondence from the model. Moving-object masks need measured latency or held state.
+5. **Reference images beat prompts.** Appearance changes need their own reference image; the
+   white reference held a "navy" van white for 15 s.
+6. **Never run `npm run build` in a folder with a running `next dev`.** It broke the dev server
+   (CSS 500, chunk 404, no hydration). Build in a separate worktree.
+7. **Gyroscope plugin:** on a desktop it ignores programmatic `rotate()`; stop it first in tests.
 
 ## Ownership
 
