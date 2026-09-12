@@ -9,6 +9,7 @@ import { X2Overlay } from "../components/witness/x2-overlay";
 import { witnessLoopCache } from "../components/witness/loop-cache";
 import { WITNESS_DEMO_SCRIPT } from "../lib/witness/demo-script";
 import { currentPose, type ViewPose } from "../lib/witness/geometry";
+import { occlusionMasksForObject } from "../lib/witness/occlusion";
 import { useScenePlayback } from "../lib/witness/use-scene-playback";
 import { useWitnessX2, WitnessX2Provider } from "../lib/witness/x2";
 import { SceneDebugOverlay } from "./scene-debug-overlay";
@@ -155,6 +156,7 @@ function PhotosphereExperienceContent() {
           key={object.id}
           viewer={viewerRef.current}
           object={object}
+          occlusionMasks={occlusionMasksForObject(playback.scene.occlusionMasks, object.id)}
           visible={status === "ready" && debugVisible}
         />
       ))}

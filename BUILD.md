@@ -26,6 +26,14 @@ no EXIF GPS coordinates. Mapbox alignment needs a supplied camera location.
   TypeScript, the production build and a Pixel 7 user test pass. The movement
   anchors remain a replaceable hardcoded fixture until the annotation export
   lands; Stage 2 does not claim moving X2 output alignment.
+- **Stage 3 — complete:** the runtime scene records a versioned provisional
+  panorama calibration, uses calibrated camera-ray depths, and projects an
+  authored foreground mask for the photographed pub-garden enclosure. The
+  figure volume passes behind the enclosure, disappears through the middle and
+  reappears on the other side. Twelve witness tests, eight calibration tests,
+  TypeScript, the production build, browser checks and supplied visual evidence
+  pass. Calibration remains approximate (2.68 m fit RMS; 5.40 m cross-validation
+  RMS), and model-facing mask reuse belongs to Stage 4.
 
 ## Ownership
 

@@ -1,5 +1,5 @@
-import { SCENE_SCHEMA_VERSION } from "./scene";
-import type { PlaybackScript, SceneObjectCorrection } from "./scene-playback";
+import { SCENE_SCHEMA_VERSION } from "./scene.ts";
+import type { PlaybackScript, SceneObjectCorrection } from "./scene-playback.ts";
 
 // Temporary authored fixture for Stage 2. Replace these approximate anchors with
 // the annotation teammate's export when it lands.
@@ -10,13 +10,23 @@ export const WITNESS_DEMO_SCRIPT: PlaybackScript = {
       asset: "/bastille-court-photosphere.jpg",
       widthPx: 9216,
       heightPx: 4140,
+      calibration: {
+        revision: "paris-garden-provisional-v1",
+        headingDeg: 94,
+        horizonTextureY: 2304,
+        cameraHeightM: 2.0338,
+        fittedCamera: { latitude: 51.5055338, longitude: -0.1059009 },
+        fitRmsM: 2.6826,
+        crossValidationRmsM: 5.4004,
+        approximate: true,
+      },
     },
     objects: [
       {
         id: "parked-van-01",
         kind: "vehicle",
         description: "Parked panel van",
-        anchor: { textureX: 5150, textureY: 2438, depthM: 10.5 },
+        anchor: { textureX: 5150, textureY: 2438, depthM: 22.2931 },
         dimensionsM: { width: 4.8, height: 2.15, depth: 2.05 },
         yawRad: Math.PI / 2,
         appearance: { color: "white" },
@@ -26,7 +36,7 @@ export const WITNESS_DEMO_SCRIPT: PlaybackScript = {
         id: "crossing-person-01",
         kind: "person",
         description: "Figure crossing",
-        anchor: { textureX: 4470, textureY: 2475, depthM: 11.8 },
+        anchor: { textureX: 3200, textureY: 2450, depthM: 20.4662 },
         dimensionsM: { width: 0.65, height: 1.75, depth: 0.45 },
         yawRad: 0,
         appearance: { color: "dark" },
@@ -36,10 +46,30 @@ export const WITNESS_DEMO_SCRIPT: PlaybackScript = {
         id: "moving-car-01",
         kind: "vehicle",
         description: "Passing car",
-        anchor: { textureX: 6120, textureY: 2500, depthM: 16 },
+        anchor: { textureX: 6120, textureY: 2470, depthM: 18.0091 },
         dimensionsM: { width: 4.35, height: 1.5, depth: 1.85 },
         yawRad: -Math.PI / 2,
         appearance: { color: "dark" },
+        approximate: true,
+      },
+    ],
+    occlusionMasks: [
+      {
+        id: "pub-garden-enclosure-01",
+        description: "Black timber pub-garden enclosure",
+        texturePolygon: [
+          { textureX: 3410, textureY: 2050 },
+          { textureX: 3510, textureY: 2045 },
+          { textureX: 3510, textureY: 2030 },
+          { textureX: 3708, textureY: 2035 },
+          { textureX: 3805, textureY: 2095 },
+          { textureX: 3805, textureY: 2215 },
+          { textureX: 3967, textureY: 2220 },
+          { textureX: 3967, textureY: 2508 },
+          { textureX: 3705, textureY: 2548 },
+          { textureX: 3410, textureY: 2550 },
+        ],
+        occludesObjectIds: ["crossing-person-01"],
         approximate: true,
       },
     ],
@@ -61,9 +91,9 @@ export const WITNESS_DEMO_SCRIPT: PlaybackScript = {
         {
           objectId: "crossing-person-01",
           keyframes: [
-            { atMs: 0, anchor: { textureX: 4310, textureY: 2460, depthM: 12.4 }, yawRad: 0 },
-            { atMs: 2_500, anchor: { textureX: 4510, textureY: 2500, depthM: 11.6 }, yawRad: 0 },
-            { atMs: 5_000, anchor: { textureX: 4710, textureY: 2540, depthM: 10.8 }, yawRad: 0 },
+            { atMs: 0, anchor: { textureX: 3200, textureY: 2450, depthM: 20.4662 }, yawRad: 0 },
+            { atMs: 2_500, anchor: { textureX: 3700, textureY: 2450, depthM: 20.4662 }, yawRad: 0 },
+            { atMs: 5_000, anchor: { textureX: 4250, textureY: 2450, depthM: 20.4662 }, yawRad: 0 },
           ],
         },
       ],
@@ -77,9 +107,9 @@ export const WITNESS_DEMO_SCRIPT: PlaybackScript = {
         {
           objectId: "moving-car-01",
           keyframes: [
-            { atMs: 0, anchor: { textureX: 6120, textureY: 2470, depthM: 16 }, yawRad: -Math.PI / 2 },
-            { atMs: 2_500, anchor: { textureX: 5480, textureY: 2530, depthM: 12.5 }, yawRad: -Math.PI / 2 },
-            { atMs: 5_000, anchor: { textureX: 4750, textureY: 2620, depthM: 9.5 }, yawRad: -Math.PI / 2 },
+            { atMs: 0, anchor: { textureX: 6120, textureY: 2470, depthM: 18.0091 }, yawRad: -Math.PI / 2 },
+            { atMs: 2_500, anchor: { textureX: 5480, textureY: 2530, depthM: 13.2521 }, yawRad: -Math.PI / 2 },
+            { atMs: 5_000, anchor: { textureX: 4750, textureY: 2620, depthM: 9.5137 }, yawRad: -Math.PI / 2 },
           ],
         },
       ],

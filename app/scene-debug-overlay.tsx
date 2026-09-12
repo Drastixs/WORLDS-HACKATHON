@@ -1,9 +1,10 @@
 "use client";
 
 import type { Viewer } from "@photo-sphere-viewer/core";
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
+import { projectOcclusionMask, texturePointInPolygon } from "../lib/witness/occlusion";
 import { CUBOID_EDGES, CUBOID_FACES, projectSceneObject } from "../lib/witness/scene-projection";
-import type { SceneObject } from "../lib/witness/scene";
+import type { OcclusionMask, SceneObject } from "../lib/witness/scene";
 
 function points(values: { x: number; y: number }[]) {
   return values.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(" ");
@@ -11,22 +12,32 @@ function points(values: { x: number; y: number }[]) {
 
 export function SceneDebugOverlay({
   object,
+  occlusionMasks = [],
   viewer,
   visible,
 }: {
   object: SceneObject;
+  occlusionMasks?: OcclusionMask[];
   viewer: Viewer | null;
   visible: boolean;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
+  const maskId = `scene-occlusion-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const objectRef = useRef(object);
+  const occlusionMasksRef = useRef(occlusionMasks);
   const lineRef = useRef<SVGPathElement>(null);
   const faceRefs = useRef<(SVGPolygonElement | null)[]>([]);
+  const occluderRefs = useRef<(SVGPolygonElement | null)[]>([]);
+  const maskBackgroundRef = useRef<SVGRectElement>(null);
   const labelRef = useRef<SVGGElement>(null);
 
   useEffect(() => {
     objectRef.current = object;
   }, [object]);
+
+  useEffect(() => {
+    occlusionMasksRef.current = occlusionMasks;
+  }, [occlusionMasks]);
 
   useEffect(() => {
     if (!viewer || !svgRef.current || !lineRef.current) return;
@@ -38,6 +49,19 @@ export function SceneDebugOverlay({
       if (!svg || !line) return;
       const { width, height } = viewer.getSize();
       svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+      maskBackgroundRef.current?.setAttribute("width", String(width));
+      maskBackgroundRef.current?.setAttribute("height", String(height));
+      occlusionMasksRef.current.forEach((mask, index) => {
+        const element = occluderRefs.current[index];
+        if (!element) return;
+        const projectedMask = projectOcclusionMask(viewer, mask);
+        element.style.display = projectedMask ? "block" : "none";
+        if (projectedMask) element.setAttribute("points", points(projectedMask.points));
+      });
+      const objectIsOccluded = occlusionMasksRef.current.some((mask) =>
+        texturePointInPolygon(objectRef.current.anchor, mask.texturePolygon),
+      );
+      if (labelRef.current) labelRef.current.style.display = objectIsOccluded ? "none" : "block";
       const projection = visible ? projectSceneObject(viewer, objectRef.current) : null;
       svg.style.display = projection ? "block" : "none";
       if (!projection) {
@@ -70,15 +94,29 @@ export function SceneDebugOverlay({
 
   return (
     <svg ref={svgRef} className="scene-debug" aria-hidden="true" style={{ display: "none" }}>
-      <g className="scene-debug__volume">
-        {CUBOID_FACES.map((_, index) => (
-          <polygon key={index} ref={(node) => { faceRefs.current[index] = node; }} />
-        ))}
-        <path ref={lineRef} />
-      </g>
-      <g ref={labelRef} className="scene-debug__label">
-        <rect x="0" y="-20" width="142" height="24" rx="5" />
-        <text x="9" y="-4">{object.description} · approx.</text>
+      <defs>
+        <mask id={maskId} maskUnits="userSpaceOnUse">
+          <rect ref={maskBackgroundRef} x="0" y="0" fill="white" />
+          {occlusionMasks.map((mask, index) => (
+            <polygon
+              key={mask.id}
+              ref={(node) => { occluderRefs.current[index] = node; }}
+              fill="black"
+            />
+          ))}
+        </mask>
+      </defs>
+      <g mask={occlusionMasks.length ? `url(#${maskId})` : undefined}>
+        <g className="scene-debug__volume">
+          {CUBOID_FACES.map((_, index) => (
+            <polygon key={index} ref={(node) => { faceRefs.current[index] = node; }} />
+          ))}
+          <path ref={lineRef} />
+        </g>
+        <g ref={labelRef} className="scene-debug__label">
+          <rect x="0" y="-20" width="172" height="24" rx="5" />
+          <text x="9" y="-4">{object.description} · approx.</text>
+        </g>
       </g>
     </svg>
   );

@@ -77,6 +77,11 @@ function cloneScript(script: PlaybackScript): PlaybackScript {
       ...script.scene,
       panorama: { ...script.scene.panorama },
       objects: script.scene.objects.map(cloneObject),
+      occlusionMasks: script.scene.occlusionMasks?.map((mask) => ({
+        ...mask,
+        texturePolygon: mask.texturePolygon.map((point) => ({ ...point })),
+        occludesObjectIds: [...mask.occludesObjectIds],
+      })),
     },
     steps: script.steps.map((step) => ({
       ...step,
@@ -280,6 +285,7 @@ export function evaluatePlayback(state: PlaybackState, elapsedMs: number): Evalu
       ...state.script.scene,
       panorama: { ...state.script.scene.panorama },
       objects,
+      occlusionMasks: state.script.scene.occlusionMasks,
     },
     step,
     stepIndex: state.stepIndex,
