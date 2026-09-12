@@ -7,6 +7,32 @@ to the next stage. This is a plan, not a claim that these features exist.
 The architecture and team interfaces are defined in
 [architecture.md](architecture.md#part-c--agreed-integration-plan).
 
+## H3 scene integration checkpoints
+
+- **Statement 1 — user-tested:** the starting van uses one captured non-empty H3
+  frame. The model requires a five-second request internally; playback is stopped
+  by closing the session after the first usable frame. The cropped still is anchored
+  to the photosphere and retained in browser memory for Restart.
+- **Statement 2 — implemented, awaiting user visual test:** generate one walking
+  person against a chroma-green reference, remove green from decoded frames, and
+  cache at most 120 small RGBA frames in browser memory. H3 supplies walking motion;
+  the existing evaluated person cuboid supplies position and size. The existing
+  foreground fence polygon erases occluded pixels from the person layer. The static
+  van stays visible. Five-second path and sprite playback share the statement clock.
+  No model calls occur on subsequent loops or Restart. Refresh clears these caches.
+  Cancel, leaving statement 2 and unmount stop capture and close the H3 session.
+
+TypeScript, production build and 20 existing scene tests pass. Actual H3 pedestrian
+quality, chroma edges, walking direction and loop continuity await the user's test;
+these are not established by the scene tests. Current caches are browser-local,
+not server storage. Statements 3 and 4 retain their existing X2 implementation.
+
+**Test:** in Chromium, enter the scene, generate the starting van, press Next, then
+Generate walking person. Watch at least two loops with Debug both on and off. Check
+that feet stay near the guide's base, the person disappears behind the black fence
+and emerges on the other side, the van remains still, and turning away/back preserves
+placement. Restart then Next should reuse the same pedestrian without generating.
+
 ## H3 capability test — isolated experiment
 
 The current user-authorized experiment is at `/h3-test`. The main scene still uses

@@ -3,8 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import type { Viewer } from "@photo-sphere-viewer/core";
 import { cachedStaticVan, generateStaticVan, type StaticVan } from "../../lib/witness/h3-static";
 
-export function StaticVanLayer({ viewer, visible, debug, onDebugChange }: {
-  viewer: Viewer | null; visible: boolean; debug: boolean; onDebugChange: (value: boolean) => void;
+export function StaticVanLayer({ viewer, visible, debug, onDebugChange, controls = true }: {
+  viewer: Viewer | null; controls?: boolean; visible: boolean; debug: boolean; onDebugChange: (value: boolean) => void;
 }) {
   const [still, setStill] = useState<StaticVan | undefined>(cachedStaticVan);
   const [status, setStatus] = useState("");
@@ -51,12 +51,12 @@ export function StaticVanLayer({ viewer, visible, debug, onDebugChange }: {
   if (!visible) return null;
   return <>
     <canvas ref={canvas} className="x2-overlay" aria-hidden="true" />
-    <aside className="witness-controls" aria-label="Static van controls">
+    {controls && <aside className="witness-controls" aria-label="Static van controls">
       <div className="witness-controls__status" role="status"><span>Status</span><strong>{still ? "Static van ready" : busy ? status : "Not started"}</strong></div>
       {!still && !busy && <button className="witness-controls__primary" onClick={() => void start()}>Generate static van</button>}
       {busy && <button className="witness-controls__primary" onClick={() => controller.current?.abort()}>Cancel</button>}
       {!busy && !still && status && <p role="alert" className="witness-controls__error">{status}</p>}
       <button className="witness-controls__debug" aria-pressed={debug} onClick={() => onDebugChange(!debug)}><span>Debug</span><span className="witness-controls__switch" aria-hidden="true" /></button>
-    </aside>
+    </aside>}
   </>;
 }
