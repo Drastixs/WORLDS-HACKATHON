@@ -270,13 +270,18 @@ function WitnessX2Session({ children }: { children: ReactNode }) {
   const feedMask = useCallback(() => feed.current?.currentMask() ?? null, []);
   const inspectFeed = useCallback(() => feed.current?.inspection() ?? null, []);
 
-  useEffect(() => () => {
+  // React re-runs mount effects in development (Strict Mode), so the flag must be set on every
+  // mount, not only initialised: otherwise start() cancels itself silently and never connects.
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
     mountedRef.current = false;
     sessionEpoch.current += 1;
     feedEpoch.current += 1;
     feedPromise.current = null;
     feed.current?.dispose();
     feed.current = null;
+    };
   }, []);
 
   const value = useMemo<WitnessX2>(
