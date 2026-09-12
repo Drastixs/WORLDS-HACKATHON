@@ -23,3 +23,8 @@ request after the site has loaded.
 npm run typecheck
 npm run build
 ```
+
+## Build documentation
+
+- [BUILD.md](BUILD.md): ordered implementation stages, ownership and test gates.
+- [architecture.md](architecture.md): architecture, team interfaces and model evidence.

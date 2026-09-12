@@ -1,13 +1,13 @@
-> **Two authors.** Part A — from the next heading down to "Part B" — was written by
-> Jack's agent (`053de48`, revised in `14fffa9` and `5a021a9`); Zeus has not edited it.
-> Part B (decisions and live test results) and Part C (reconciled plan, pending Jack's
-> sign-off) were added by Zeus, Atilade's planning agent, on 12 Sep 2026.
+> Part A records the current architecture. Part B preserves Zeus's reported
+> experiments and earlier proposals. Part C is the current integration plan,
+> revised with Jack's agreed team split and X2-only decisions on 12 Sep 2026.
+> Follow [BUILD.md](BUILD.md) for ordered work and test gates.
 
 # WITNESS architecture
 
-Status: proposed architecture based on the agreed demo scope. This document does
-not imply that the generation pipeline is implemented. Unresolved choices are
-listed at the end.
+Status: agreed design, with implementation and validation still outstanding.
+The owned photosphere viewer already works; the generation pipeline is not
+claimed complete. Part C supersedes conflicting historical proposals in Part B.
 
 ## Demo scope
 
@@ -23,13 +23,15 @@ initial scope. Each step waits for Next while its animation loops. X2 is the
 only generation path; no alternative model or rendered-object fallback is planned.
 
 Keep the photographed surroundings and lighting unchanged. Added cars, people,
-animals and similar objects use distinct labelled 3D bounding volumes as generation guides.
+animals and similar objects have stable labelled 3D bounding volumes in scene
+data. Model-facing frames use recognisable object-shaped guides, without text
+labels or movement arrows. Viewer-facing debug bounds remain subtle.
 Accurate object placement is the primary success criterion.
 
 ## Core approach
 
 Maintain a small, deterministic 3D scene over a panoramic background. Render
-the current camera view, including the labelled boxes and their occlusion, and
+the current camera view, including object-shaped guides and their occlusion, and
 stream that composite into Reactor X2. A detailed prompt describes how X2 should
 replace each box with a realistic object while preserving the background.
 
@@ -114,19 +116,22 @@ panorama and guides, excluding controls, the timeline and the debug toggle. Veri
 imagery delivery and renderer support capture; a separately embedded panorama
 viewer cannot simply be assumed capturable.
 
-Generate a long, specific prompt from a stable template and the active scene
-state, reflecting the team's practical experience with X2. Include:
+Generate a specific prompt from a stable template and active scene state.
+Preserve the user's intent for explicit placement and appearance instructions
+while respecting the SDK/API limit verified by the generation teammate; Part B
+reports a 1000-character limit. Include:
 
 - Background preservation, camera perspective and existing lighting.
-- The mapping from each visible box label to its object description.
+- The mapping from each guide shape and spatial location to its object description.
 - Desired scale, facing direction and visible appearance.
 - Instructions to follow source motion and preserve visible occlusion.
 - Instructions to remove guide boxes and labels from the realistic output.
 
-Object IDs remain authoritative in scene data. Visible labels are visual cues,
-not a documented structured object-control channel. Test whether labels help
-X2 distinguish boxes or leak into the output. Use distinct guide colours and descriptions to distinguish objects, especially
-when they overlap.
+Object IDs and labels remain authoritative in scene data and prompts. Do not
+paint annotation text or arrows into the model-facing video: the reported tests
+in Part B found label leakage. Use proportioned object-shaped guides and test
+reference images to improve placement. An annotation box defines the bounds;
+it does not have to be the literal appearance of the guide sent to X2.
 
 Detailed prompts do not guarantee exact boundaries, identity persistence or
 unchanged background pixels. Those are acceptance criteria to measure, not
@@ -229,10 +234,12 @@ If GPS is absent, record a manually supplied camera location; if heading is
 absent, calibrate against landmarks. Do not infer coordinates from the earlier
 Street View screenshot.
 
-The original photosphere asset and GPS metadata have not yet been verified in
-this checkout. Source choice is settled; asset discovery and calibration remain
-implementation prerequisites. Mapbox supplies geographic context and rough
-geometry, not replacement background imagery.
+The current asset is `public/bastille-court-photosphere.jpg`. Inspection found
+9216 × 4140 pixels, equirectangular GPano metadata describing a 9216 × 4608 full
+panorama, crop origin (0, 0), and a reported heading of 94 degrees. No EXIF GPS
+coordinates were found. Obtain a camera location before Mapbox alignment;
+validate the metadata heading against the viewer rather than applying it twice.
+Mapbox supplies geographic context and rough geometry, not background imagery.
 
 ## First validation slice
 
@@ -254,15 +261,15 @@ be authored explicitly; generated details are not recovered evidence.
 
 ## Remaining validation
 
-- Locate the original photosphere and verify GPS, projection and orientation metadata.
+- Obtain missing camera coordinates and verify the existing projection/heading alignment.
 - Confirm Mapbox coverage and geometry access, then calibrate occlusion surfaces.
 - Verify X2 follows labelled volumes and preserves object identity.
 - Validate frame alignment and compositing for strict box containment.
 - Measure placement error and end-to-end latency on the Pixel 7; agree numeric
   thresholds from that test. Accurate placement remains the priority.
 
-This revision updates the architecture only. It does not implement the panorama
-migration, UI changes or map integration, or install new dependencies.
+This revision updates documentation only. It does not implement new UI, map
+integration, generation or caching, or install dependencies.
 
 The contributor notes below are preserved as reported evidence and proposals.
 Part A above reflects the latest user decisions: owned Pixel 7 photosphere,
@@ -281,8 +288,8 @@ limits below still need to inform implementation and validation.
 > Everything above this line is Part A, originally written by Jack's agent in `053de48` and
 > since revised by Jack's agent (`14fffa9`) to reflect the latest user decisions; Zeus has not
 > edited it. Part B records what Atilade and Zeus decided, what has been measured on the live
-> APIs, and answers to Part A's open points. Part C proposes how the two fit together; it needs
-> Jack's agreement before it is treated as settled.
+> APIs, and answers to Part A's earlier open points. These notes are historical;
+> the current Part C below replaces the original pending proposal.
 
 ## B1. End goal
 
@@ -368,7 +375,10 @@ Further notes on Part A:
 - X2 takes **one reference image** per session, and swapping it restarts the stream. Give it to
   the van; the other objects rely on their guide shape and the prompt.
 
-## B5. Zeus's fallback path: X2 fills, LingBot holds
+## B5. Historical experiment: X2 fills, LingBot holds
+
+This experiment is retained as evidence only. LingBot and Runware are outside
+the agreed implementation scope; do not wire this path into the demo.
 
 > **Superseded by Part A (`5a021a9`): X2 is the only generation path.** Kept as a record of
 > what was measured, not as a plan.
@@ -385,53 +395,105 @@ render can.
 
 ---
 
-# Part C — Reconciled plan (proposal, needs Jack's sign-off)
+# Part C — Agreed integration plan
 
-> **Author: Zeus.** Keeps Part A's architecture as the target and says what gets built in the
-> time left.
+Updated after Jack's review of `ecc01c3`, the Runware removal in `9ace9db`,
+and the subsequent X2-only and caching decisions. The earlier fallback and
+pending sign-off proposal is superseded. No Runware or LingBot integration is
+planned. Historical experiments remain in Part B for reference.
 
-## C1. One scene, two outputs
+## C1. Responsibilities
 
-Part A's scene state (stable object IDs, labels, descriptions, transforms) is the single source
-of truth. Labels live in the scene data and the prompt, **not drawn in the model-facing frame**
-(B4). Its source renderer produces:
-
-1. the **model-facing composite** (photosphere + object-shaped guides + occlusion) in a **fixed
-   landscape canvas**, streamed to X2 via `captureStream(24)` — the primary path;
-2. the **projected object masks**, used to composite X2's output back over the photosphere
-   (required, B4); and
-3. the same masks, stored alongside each clip in Part A's view-specific loop cache.
-
-The viewer-facing debug bounds (faint, off by default) stay separate from the model-facing
-guides, as Part A says. The prompt builder reads the same scene state for both paths, applies
-the moderation filter (B2 #5), and stays under X2's 1000-character limit.
-
-## C2. Decision (made early, at 13:50, on the real-street test)
-
-**X2 is the primary path**, with object-shaped guides (no text in the frame), a reference image
-for the van, and **mandatory** mask compositing over the photosphere. On the real street that
-combination put one van where the guide was and corrected it from white to navy in place, with
-the rest of the frame untouched (B3, test 3).
-
-Part A (`5a021a9`) rules out any other generation path, so there is no model fallback: if X2
-misbehaves or has no capacity at the table, the fallback is the recorded run.
-
-## C3. Who builds what
-
-| Owner | Work |
+| Owner | Deliverable |
 |---|---|
-| **Jack + Jack's agent** | Part A: the photosphere viewer (done), alignment (manual camera position, B4), scene state and story steps behind Next, the view-specific loop cache, occlusion, timeline. |
-| **Zeus** | Done: token route (`app/api/reactor/token/route.ts`); shared camera maths and the van guide (`lib/witness/geometry.ts`); the contract with the compositor (`lib/witness/contract.ts`); the fixed landscape model feed with the grey guide (`lib/witness/model-feed.ts`); the X2 session (`lib/witness/x2.tsx`); prompts and the moderation filter (`lib/witness/prompts.ts`). Next: session recording, reviewing and committing Prometheus-w's work. |
-| **Prometheus-w** (Codex, Witness board) | T-002: composite X2 over Jack's viewer — expose the pose, settle detection, the masked overlay, "Updating reconstruction", the correction button and the debug toggle. Zeus reviews and commits its files. |
-| **Atilade** | Blur the Lexus number plate; ask Reactor staff about capacity at 17:45; record the voice lines and 999 call (no rain line); cut the submission video in VEED; run the pitch; get Jack's sign-off on this Part C. |
+| Annotation teammate | Existing annotation tooling and export: object IDs, descriptions, dimensions, placement, facing direction, paths, timing and step membership. Boxes and arrows are authoring aids. |
+| Generation teammate (Zeus/Atilade's stream) | Existing X2 client, token route, prompts, reference images, geometry/model feed and output contract; session recording and review of their compositor work. |
+| Prometheus-w, via Zeus | Existing T-002 work: pose/settle integration, masked overlay, updating state, correction control and Debug. Integrate this work rather than rebuild it. |
+| Jack + this agent | Import annotation data; scene playback, alignment, occlusion, Next/Restart, timeline and cache. Integrate the existing model feed and compositor, extending their contracts for motion and replay where needed. |
 
-## C4. Timeline (London time)
+Integrate the teammates' deliverables rather than build another annotation
+editor or X2 client. Implementation is requested on `main`; coordinate file
+ownership and commit narrow changes without overwriting concurrent work.
+The unused `feature/scene-foundation` worktree is not the implementation target.
 
-| Time | Milestone |
-|---|---|
-| 13:00–13:50 | ✅ LingBot correction test; ✅ three X2 tests including the real street; ✅ no-Runware fallback test (B3). ✅ Decision: X2 primary with compositing. |
-| 13:50–14:30 | ✅ Zeus's model feed and X2 session in the app (14:00). Prometheus-w compositing into Jack's viewer (T-002). |
-| 14:30–16:30 | Join them: phone view → landscape render → X2 → composite on screen. Story steps behind Next. |
-| 16:30–17:00 | Freeze features. Rehearse the two-minute table demo. |
-| 17:00–17:30 | Record the backup run (Reactor recording + screen capture), cut, **submit by 17:30**. |
-| 17:45 | Judging: mint a fresh token and **open the X2 session before the first judge arrives, then keep it open** — a 429 at the table is worse than the per-second cost. The recorded run is the fallback if capacity is gone. |
+### Existing work to reuse
+
+The concurrent teammate update reports `lib/witness/geometry.ts`,
+`lib/witness/contract.ts`, `lib/witness/model-feed.ts`, `lib/witness/x2.tsx`
+and `lib/witness/prompts.ts`, with Prometheus-w integrating the overlay.
+Inspect these modules before implementing any stage. Part B now includes a
+real-photosphere X2 test; retain that evidence while testing the integrated
+phone pipeline independently.
+
+## C2. Shared scene contract
+
+Inspect a real annotation export before finalising field names. Agree these
+semantics first:
+
+- Scene schema version, panorama/calibration revision, camera origin and coordinate convention.
+- Stable object ID, kind, description, dimensions, orientation and initial position.
+- Motion path points with times in seconds; define interpolation and whether a
+  point marks the object's centre or ground contact position.
+- Step IDs, loop duration, visibility intervals and corrections to existing IDs.
+- Explicit units: metres for world dimensions, radians for rotations, seconds for time.
+
+Prefer local 3D coordinates shared with the renderer. If the annotation tool
+exports panorama yaw/pitch, include distance or a calibrated ground-plane
+intersection. Raw screen pixels alone are insufficient. If only screen-space
+annotations exist, preserve their source camera pose, field of view and image
+size, then convert with an explicit depth/ground assumption. Mark such placement
+as approximate rather than silently treating it as surveyed geometry.
+
+## C3. Renderer and X2 handoff
+
+For one immutable scene revision, camera pose and animation time, produce:
+
+1. Clean photosphere frame for background preservation.
+2. Fixed-size model-facing frame containing object-shaped guides and occlusion,
+   excluding controls, labels and arrows; reuse the teammate's landscape feed
+   and publish this as the X2 source video track. Explicitly map its camera and
+   field of view to the portrait display rather than assume equal pixel coordinates.
+3. Projected visible object masks for output compositing and cached playback.
+
+Keep the subtle Debug overlay separate from the generation inputs. Attach local
+frame IDs, animation timestamps, camera pose, field of view and scene revision
+to the renderer's frame records. These are application metadata, not a claim
+that X2 echoes them. The generation teammate must expose available output timing
+information and session transitions so integration can establish correspondence.
+
+The X2 adapter accepts a source track, prompt and optional reference image, and
+exposes output video, readiness, errors and cleanup. Verify prompt length and
+model identifier against the installed SDK and account; Part B reports
+`xmax/x2`. Verify the current token route is scoped to X2 only; earlier revisions
+included LingBot. No runtime route is modified by this documentation change.
+
+## C4. Compositing and cache
+
+Composite returned X2 video only through the matching projected object masks,
+with a small tested edge margin and feathering; preserve the original
+photosphere outside those regions. Apply foreground occlusion to the masks.
+Cropping cannot fix an object generated in the wrong place. A stable camera
+also does not solve moving-object latency, so verify temporal correspondence.
+
+Each step waits for Next. Generate and cache a complete loop for a stable view,
+then replay its clip and masks together. Corrections persist across loops and
+invalidate affected cache entries. Restart restores the original scene.
+
+Cache identity includes the scene/correction revision, panorama/calibration,
+camera orientation, field of view, animation definition and generation settings.
+When the phone leaves a cached direction, rotate the original photosphere
+immediately, hide mismatched generated layers and show "Updating reconstruction".
+Generate when the new direction settles; reuse matching cached views and discard
+obsolete results. This update interval is explicitly accepted by the user.
+
+## C5. Implementation sequence
+
+Follow the gates in [BUILD.md](BUILD.md): annotation contract
+and stationary object → deterministic motion and steps → occlusion → guide/mask
+capture → one X2 object → aligned compositing → cached loop → view changes →
+full Pixel 7 rehearsal. Complete and check each slice before expanding it.
+
+The earliest end-to-end proof is one stationary van at the actual location,
+using the annotation teammate's data and generation teammate's client, followed
+by its colour correction. Model tests in Part B do not establish success for
+moving objects or unrestricted camera rotation.
