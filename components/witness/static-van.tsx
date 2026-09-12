@@ -12,7 +12,7 @@ export function StaticVanLayer({ viewer, visible, debug, onDebugChange, controls
   const canvas = useRef<HTMLCanvasElement>(null);
   const controller = useRef<AbortController | null>(null);
   useEffect(() => () => controller.current?.abort(), []);
-  useEffect(() => { if (!visible) controller.current?.abort(); }, [visible]);
+  useEffect(() => { if (!visible || !controls) controller.current?.abort(); }, [visible, controls]);
   async function start() {
     if (busy || still) return;
     const request = new AbortController(); controller.current = request; setBusy(true);

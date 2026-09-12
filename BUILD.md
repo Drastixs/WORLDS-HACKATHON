@@ -23,10 +23,25 @@ The architecture and team interfaces are defined in
   No model calls occur on subsequent loops or Restart. Refresh clears these caches.
   Cancel, leaving statement 2 and unmount stop capture and close the H3 session.
 
+- **Statement 3 — implemented, awaiting user visual test:** a dark car driving-in-place
+  clip uses the same chroma extraction and bounded frame cache as the person, with a
+  landscape reference and left-facing vehicle prompt. The car follows the existing
+  five-second path and projected box. The static van persists and the cached person
+  holds its final walking frame at the completed crossing position. Car loops and
+  Restart reuse the same cached frames. Leaving the active generation step cancels
+  its capture. Sprite projection approximates a view-facing image; it does not create
+  new 3D viewpoints of the generated car or model a collision.
+
+**Statement 3 test:** generate the van and person, advance to 3/4, and press Generate
+moving car. Compare its position with Debug through two loops. Check direction,
+scale, wheels, green edges, and that the van/person remain in place. Restart and
+advance again to verify the clip is reused. Actual car generation is left for the
+user's visual test, as requested.
+
 TypeScript, production build and 20 existing scene tests pass. Actual H3 pedestrian
 quality, chroma edges, walking direction and loop continuity await the user's test;
 these are not established by the scene tests. Current caches are browser-local,
-not server storage. Statements 3 and 4 retain their existing X2 implementation.
+not server storage. Statement 4 retains its existing X2 implementation.
 
 **Test:** in Chromium, enter the scene, generate the starting van, press Next, then
 Generate walking person. Watch at least two loops with Debug both on and off. Check
