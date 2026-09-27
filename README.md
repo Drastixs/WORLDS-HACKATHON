@@ -1,4 +1,4 @@
-# WORLD
+# WON 1000 POUNDS AND 2000 POUNDS IN CREDITS
 
 A one-phone Next.js demo that opens an owned Pixel 7 photosphere captured outside
 Bastille Court, 1–2 Paris Garden, London. On supported mobile devices, turning the
